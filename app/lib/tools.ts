@@ -1,52 +1,87 @@
 import { MakeExecutor } from './executors/make_executor.js';
 import { FileSystem } from './data/file_system.js';
-import { Nomenclature } from './utils/nomenclature.js';
 import { TokenTracker } from './analytics/token_tracker.js';
 import { ToolInterceptor } from './interceptors/base.js';
-import { Tool } from './tools/base.js';
+import { Tool, ToolDefinition } from './tools/base.js';
 import { RunMakeTool } from './tools/run_make.js';
 import { WriteNoteTool } from './tools/write_note.js';
 import { ReadMemoryTool } from './tools/read_memory.js';
 import { GetContextStatsTool } from './tools/get_context_stats.js';
 import { JulesTool } from './tools/jules.js';
 import { DisplayLargeOutputTool } from './tools/display_large_output.js';
-import toolsDefinitions from './config/tools.json' with { type: 'json' };
+
+// Definitions for pure make-target tools that have no Tool class.
+// These are executed via the dynamic make target fallback in execute().
+const MAKE_TARGET_DEFINITIONS: ToolDefinition[] = [
+  {
+    type: 'function',
+    function: {
+      name: 'create_boss_skills',
+      description: 'Create a new skill for the Boss Agent by generating stubs and registering it in the system.',
+      parameters: {
+        type: 'object',
+        properties: {
+          NAME: {
+            type: 'string',
+            description: "The name of the new skill (e.g., 'pdf-summarizer')",
+          },
+          PROMPT: {
+            type: 'string',
+            description: "The requirements and description of the skill's functionality",
+          },
+        },
+        required: ['NAME', 'PROMPT'],
+      },
+    },
+  },
+];
 
 /**
  * Tool registry — single source of truth for all tool definitions and executors.
+ * To add a new tool: create its class in app/lib/tools/, then call register() below.
  */
 export class ToolRegistry {
   private make: MakeExecutor;
   private fs: FileSystem;
-  private nomenclature?: Nomenclature;
   private tokenTracker?: TokenTracker;
-  private definitions: any[];
+  private definitions: ToolDefinition[] = [...MAKE_TARGET_DEFINITIONS];
   private interceptors: ToolInterceptor[] = [];
   private tools: Map<string, Tool> = new Map();
 
-  constructor(fs: FileSystem, nomenclature?: Nomenclature, tokenTracker?: TokenTracker) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  constructor(fs: FileSystem, _nomenclature?: unknown, tokenTracker?: TokenTracker) {
     this.make = new MakeExecutor();
     this.fs = fs;
-    this.nomenclature = nomenclature;
     this.tokenTracker = tokenTracker;
-    this.definitions = structuredClone(toolsDefinitions as any[]);
-    
+
     this._initializeTools();
-    this._refreshMakeDescription();
   }
 
   /**
-   * Initialize the tool implementations.
+   * Register a tool — adds its definition and executor in one call.
+   */
+  private register(tool: Tool): void {
+    this.definitions.push(tool.definition);
+    this.tools.set(tool.definition.function.name, tool);
+  }
+
+  /**
+   * Initialize all tools. To add a new tool, create its class and add one register() call here.
    */
   private _initializeTools(): void {
-    this.tools.set('run_make', new RunMakeTool(this.make));
-    this.tools.set('write_note', new WriteNoteTool(this.fs));
-    this.tools.set('read_memory', new ReadMemoryTool(this.fs));
-    this.tools.set('jules', new JulesTool(this.make));
-    this.tools.set('display_large_output', new DisplayLargeOutputTool(this.fs));
-    
+    const runMakeTool = new RunMakeTool(this.make);
+    // Append the live list of available make targets to run_make's description.
+    runMakeTool.definition.function.description +=
+      ' Available targets: ' + this.make.getHelp();
+    this.register(runMakeTool);
+
+    this.register(new WriteNoteTool(this.fs));
+    this.register(new ReadMemoryTool(this.fs));
+    this.register(new JulesTool(this.make));
+    this.register(new DisplayLargeOutputTool(this.fs));
+
     if (this.tokenTracker) {
-      this.tools.set('get_context_stats', new GetContextStatsTool(this.tokenTracker));
+      this.register(new GetContextStatsTool(this.tokenTracker));
     }
   }
 
@@ -58,22 +93,9 @@ export class ToolRegistry {
   }
 
   /**
-   * Refresh the run_make tool description with the latest targets from the Makefile.
-   */
-  private _refreshMakeDescription(): void {
-    const runMakeTool = this.definitions.find(d => d.function.name === 'run_make');
-    if (runMakeTool) {
-      const makeHelp = this.make.getHelp();
-      // Replace the placeholder or update the description
-      const baseDescription = "Execute a predefined make target. Only targets defined in the root Makefile are allowed. You cannot run arbitrary shell commands. ";
-      runMakeTool.function.description = baseDescription + "Available targets: " + makeHelp;
-    }
-  }
-
-  /**
    * Returns OpenAI-compatible tool definitions for the LLM.
    */
-  getDefinitions(): any[] {
+  getDefinitions(): ToolDefinition[] {
     return this.definitions;
   }
 

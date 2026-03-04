@@ -1,4 +1,4 @@
-import { Tool } from './base.js';
+import { Tool, ToolDefinition } from './base.js';
 import { FileSystem } from '../data/file_system.js';
 import fs from 'fs-extra';
 import path from 'path';
@@ -10,6 +10,28 @@ import path from 'path';
 export class DisplayLargeOutputTool implements Tool {
   private fs: FileSystem;
   private projectRoot: string;
+
+  readonly definition: ToolDefinition = {
+    type: 'function',
+    function: {
+      name: 'display_large_output',
+      description: 'Save large outputs to files without consuming context tokens. Use this when a tool returns output that exceeds 2000 tokens. The output is written to data/large_outputs/ and a reference is returned instead.',
+      parameters: {
+        type: 'object',
+        properties: {
+          content: {
+            type: 'string',
+            description: 'The large content to save to a file.',
+          },
+          filename: {
+            type: 'string',
+            description: 'Optional filename for the output file. If not provided, a unique name will be generated.',
+          },
+        },
+        required: ['content'],
+      },
+    },
+  };
 
   constructor(fs: FileSystem) {
     this.fs = fs;

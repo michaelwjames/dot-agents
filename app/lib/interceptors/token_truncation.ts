@@ -12,6 +12,8 @@ export class TokenTruncationInterceptor implements ToolInterceptor {
   private tokenTracker: TokenTracker;
   private threshold: number;
   private projectRoot: string;
+  private recentTruncatedFiles = new Set<string>();
+  private maxRecentFiles = 100;
 
   constructor(tokenTracker: TokenTracker, threshold = 2000) {
     this.tokenTracker = tokenTracker;
@@ -20,6 +22,12 @@ export class TokenTruncationInterceptor implements ToolInterceptor {
   }
 
   async postExecute(toolName: string, args: any, result: string): Promise<string> {
+    // Never truncate read_memory output — it causes an infinite loop where
+    // the LLM reads the truncated file, which gets truncated again to a new file, etc.
+    if (toolName === 'read_memory') {
+      return result;
+    }
+
     const tokenCount = this.tokenTracker.countTokens(result);
 
     if (tokenCount > this.threshold) {
@@ -33,6 +41,13 @@ export class TokenTruncationInterceptor implements ToolInterceptor {
       const filepath = path.join(outputDir, outputFilename);
       
       await fs.writeFile(filepath, result, 'utf-8');
+      
+      // Track this file as recently truncated
+      this.recentTruncatedFiles.add(outputFilename);
+      if (this.recentTruncatedFiles.size > this.maxRecentFiles) {
+        const oldest = Array.from(this.recentTruncatedFiles)[0];
+        this.recentTruncatedFiles.delete(oldest);
+      }
       
       const contentLength = result.length;
       
@@ -53,5 +68,11 @@ ${result.slice(0, 500)}...`;
     }
 
     return result;
+  }
+
+  // Check if a filename was recently created by truncation
+  isRecentlyTruncated(filename: string): boolean {
+    const cleanFilename = filename.replace(/^data\/large_outputs\//, '').replace(/^large_outputs\//, '');
+    return this.recentTruncatedFiles.has(cleanFilename);
   }
 }

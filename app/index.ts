@@ -54,6 +54,9 @@ const enc = getEncoding('cl100k_base');
 let groqCallCount = 0;
 let groqCallTypes = new Map<string, number>();
 
+// Track tool execution patterns for loop detection
+let toolExecutionHistory: Array<{name: string, args: string}> = [];
+
 // --- Types ---
 export interface NormalizedMessage {
   sessionId: string;
@@ -173,13 +176,14 @@ async function processMessage(message: NormalizedMessage) {
 
 CORE RULES:
 1. Always address the user as "Boss."
-2. You can ONLY execute predefined make targets via the 'run_make' tool. You cannot run arbitrary shell commands.
-3. You can save notes to memory using 'write_note'.
-4. You have access to a lightweight index of files in vault/, memory/, and skills/ directories. Files marked with [ALWAYS_REMEMBER] are especially important.
-5. Use the 'read_memory' tool to fetch the full content of any file from the index if you need it to answer the Boss.
-6. Keep your responses concise and action-oriented unless the Boss asks for detail.
-7. If the Boss sent a voice note, you received the transcribed text. Confirm what you heard before acting on ambiguous commands.
-8. If you receive a [SYSTEM: KAIROS_TICK] message, you are waking up autonomously. Review your current context (especially tasks in memory and active Jules sessions). If nothing requires attention, reply with exactly 'NO_ACTION_REQUIRED' to prevent spamming the chat. If action is needed, use your tools or send a proactive message.
+2. For Jules AI agent operations (list sessions, get session, list activities, send message, approve plan, etc.), ALWAYS use the 'jules' tool — never run jules-* make targets directly via 'run_make'.
+3. For all other operations, use 'run_make' with a predefined make target. You cannot run arbitrary shell commands.
+4. You can save notes to memory using 'write_note'.
+5. You have access to a lightweight index of files in vault/, memory/, and skills/ directories. Files marked with [ALWAYS_REMEMBER] are especially important.
+6. Use the 'read_memory' tool to fetch the full content of any file from the index if you need it to answer the Boss.
+7. Keep your responses concise and action-oriented unless the Boss asks for detail.
+8. If the Boss sent a voice note, you received the transcribed text. Confirm what you heard before acting on ambiguous commands.
+9. If you receive a [SYSTEM: KAIROS_TICK] message, you are waking up autonomously. Review your current context (especially tasks in memory and active Jules sessions). If nothing requires attention, reply with exactly 'NO_ACTION_REQUIRED' to prevent spamming the chat. If action is needed, use your tools or send a proactive message.
 
 ${soulPrompt ? `PERSONALITY:\n${soulPrompt}\n` : ''}
 AVAILABLE FILES:
@@ -321,6 +325,36 @@ SYSTEM SNAPSHOT:
       }
       toolRound++;
 
+      // Check for repeated tool calls (loop detection)
+      const currentToolCalls = responseMessage.tool_calls.map((tc: any) => ({
+        name: tc.function.name,
+        args: tc.function.arguments
+      }));
+
+      // Detect if we're repeating the same tools
+      const repeatCount = toolExecutionHistory.filter((h, idx) => {
+        const recentHistory = toolExecutionHistory.slice(Math.max(0, idx - 2));
+        return recentHistory.some((h: any) => 
+          currentToolCalls.some((ct: any) => ct.name === h.name && ct.args === h.args)
+        );
+      }).length;
+
+      if (repeatCount >= 3) {
+        log(`[LOOP_DETECTION] Detected repeated tool execution pattern. Stopping to prevent infinite loop.`);
+        responseMessage.tool_calls = [];
+        responseMessage.content = 'Error: I detected a loop in tool execution. Please try a different approach.';
+        break;
+      }
+
+      // Track tool execution
+      for (const tc of currentToolCalls) {
+        toolExecutionHistory.push({ name: tc.name, args: tc.args });
+      }
+      // Keep only recent history
+      if (toolExecutionHistory.length > 20) {
+        toolExecutionHistory = toolExecutionHistory.slice(-20);
+      }
+
       messages.push(responseMessage);
 
       const toolResults = await Promise.all(
@@ -335,6 +369,7 @@ SYSTEM SNAPSHOT:
           return {
             role: 'tool',
             tool_call_id: toolCall.id,
+            name,
             content: result,
           };
         })

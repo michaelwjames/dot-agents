@@ -126,19 +126,29 @@ jules-list-sessions:
 	@$(JULES_CLIENT) list-sessions $(if $(SIZE),--page-size $(SIZE))
 
 jules-get-session:
-	@$(JULES_CLIENT) get-session --session-id $(ID)
+	@sid="$(ID)"; \
+	if [ -z "$$sid" ]; then sid="$(SESSION_ID)"; fi; \
+	$(JULES_CLIENT) get-session --session-id "$$sid"
 
 jules-delete-session:
-	@$(JULES_CLIENT) delete-session --session-id $(ID)
+	@sid="$(ID)"; \
+	if [ -z "$$sid" ]; then sid="$(SESSION_ID)"; fi; \
+	$(JULES_CLIENT) delete-session --session-id "$$sid"
 
 jules-send-message:
-	@$(JULES_CLIENT) send-message --session-id $(ID) --message "$(MESSAGE)"
+	@sid="$(ID)"; \
+	if [ -z "$$sid" ]; then sid="$(SESSION_ID)"; fi; \
+	$(JULES_CLIENT) send-message --session-id "$$sid" --message "$(MESSAGE)"
 
 jules-approve-plan:
-	@$(JULES_CLIENT) approve-plan --session-id $(ID)
+	@sid="$(ID)"; \
+	if [ -z "$$sid" ]; then sid="$(SESSION_ID)"; fi; \
+	$(JULES_CLIENT) approve-plan --session-id "$$sid"
 
 jules-list-activities:
-	@$(JULES_CLIENT) list-activities --session-id $(ID) $(if $(SIZE),--page-size $(SIZE))
+	@sid="$(ID)"; \
+	if [ -z "$$sid" ]; then sid="$(SESSION_ID)"; fi; \
+	$(JULES_CLIENT) list-activities --session-id "$$sid" $(if $(SIZE),--page-size $(SIZE))
 
 jules-create-session:
 	@$(JULES_CLIENT) create --prompt "$(PROMPT)" \

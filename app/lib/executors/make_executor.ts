@@ -88,6 +88,40 @@ export class MakeExecutor {
   }
 
   /**
+   * Normalize argument keys to match Makefile variable naming conventions.
+   * Converts kebab-case, camelCase, and snake_case to UPPER_CASE.
+   */
+  private _normalizeArgKey(key: string): string {
+    // Common mappings for Jules and other tools
+    const knownMappings: Record<string, string> = {
+      'session-id': 'SESSION_ID',
+      'session_id': 'SESSION_ID',
+      'sessionId': 'SESSION_ID',
+      'pr-number': 'PR_NUMBER',
+      'pr_number': 'PR_NUMBER',
+      'prNumber': 'PR_NUMBER',
+      'page-size': 'SIZE',
+      'page_size': 'SIZE',
+      'pageSize': 'SIZE',
+    };
+
+    // Check known mappings first
+    if (knownMappings[key]) {
+      return knownMappings[key];
+    }
+
+    // Convert kebab-case to UPPER_CASE
+    let normalized = key.replace(/-/g, '_').toUpperCase();
+
+    // Handle camelCase to UPPER_CASE
+    if (normalized !== normalized.toUpperCase()) {
+      normalized = key.replace(/([a-z])([A-Z])/g, '$1_$2').toUpperCase();
+    }
+
+    return normalized;
+  }
+
+  /**
    * Execute a make target with optional arguments.
    * @param target - The make target to run
    * @param args - Key-value arguments (e.g., { PR_NUMBER: "42" })
@@ -112,14 +146,16 @@ export class MakeExecutor {
       };
     }
 
-    // Build argument string with sanitization
+    // Build argument string with sanitization and normalization
     let argString = '';
     if (args && typeof args === 'object') {
       for (const [key, value] of Object.entries(args)) {
-        if (DANGEROUS_CHARS.test(key) || DANGEROUS_CHARS.test(String(value))) {
-          return { stdout: '', stderr: `Error: Argument "${key}" contains forbidden characters.`, exitCode: 1 };
+        const normalizedKey = this._normalizeArgKey(key);
+
+        if (DANGEROUS_CHARS.test(normalizedKey) || DANGEROUS_CHARS.test(String(value))) {
+          return { stdout: '', stderr: `Error: Argument "${normalizedKey}" contains forbidden characters.`, exitCode: 1 };
         }
-        argString += ` ${key}="${String(value)}"`;
+        argString += ` ${normalizedKey}="${String(value)}"`;
       }
     }
 
