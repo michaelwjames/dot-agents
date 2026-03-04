@@ -1,4 +1,5 @@
 import { exec } from 'child_process';
+import { log, logWarn } from './logger.js';
 import { promisify } from 'util';
 
 const execAsync = promisify(exec);
@@ -32,9 +33,9 @@ export class Nomenclature {
     try {
       const { stdout } = await execAsync('gh repo list --json name,url --limit 100');
       this.repos = JSON.parse(stdout);
-      console.log(`[NOMENCLATURE] Loaded ${this.repos.length} repos.`);
+      log(`[NOMENCLATURE] Loaded ${this.repos.length} repos.`);
     } catch (error: any) {
-      console.warn('[NOMENCLATURE] Could not load repo catalog:', error.message);
+      logWarn('[NOMENCLATURE] Could not load repo catalog:', error.message);
       this.repos = [];
     }
   }

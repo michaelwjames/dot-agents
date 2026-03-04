@@ -1,5 +1,6 @@
 import { GroqProvider } from '../core/groq_provider.js';
 import { FileSystem } from '../data/file_system.js';
+import { log, logError } from '../utils/logger.js';
 
 /**
  * Service to compress session history by summarizing older messages.
@@ -21,7 +22,7 @@ export class MemoryCompressor {
   async compressSession(sessionId: string, history: any[]): Promise<void> {
     if (history.length <= 10) return; // Not enough history to warrant compression
 
-    console.log(`[COMPRESSOR] Starting compression for session: ${sessionId}`);
+    log(`[COMPRESSOR] Starting compression for session: ${sessionId}`);
 
     // Split history: messages to compress and recent messages to keep
     const KEEP_RECENT = 5;
@@ -53,9 +54,9 @@ export class MemoryCompressor {
       ];
 
       await this.fs.saveSession(sessionId, compressedHistory);
-      console.log(`[COMPRESSOR] Compression complete for session: ${sessionId}`);
+      log(`[COMPRESSOR] Compression complete for session: ${sessionId}`);
     } catch (error) {
-      console.error(`[COMPRESSOR] Error during compression:`, error);
+      logError(`[COMPRESSOR] Error during compression:`, error);
     }
   }
 }

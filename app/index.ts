@@ -13,12 +13,19 @@ import { TokenTruncationInterceptor } from './lib/interceptors/token_truncation.
 import { LoggingInterceptor } from './lib/interceptors/logging.js';
 import { MemoryCompressor } from './lib/services/compressor.js';
 import { KairosEngine } from './lib/engine/kairos.js';
+import { log } from './lib/utils/logger.js';
+import { TerminalAdapter } from './lib/adapters/terminal.js';
 
 // --- Configuration ---
 const DISCORD_BOT_TOKEN = process.env.DISCORD_BOT_TOKEN;
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
+const TERMINAL_MODE = process.env.TERMINAL_MODE === 'true';
+const KAIROS_ENABLED = process.env.KAIROS_ENABLED !== 'false';
+const COMPRESSION_ENABLED = process.env.COMPRESSION_ENABLED !== 'false';
+const MAX_TOOL_ROUNDS = parseInt(process.env.MAX_TOOL_ROUNDS || '10', 10);
 
-if (!DISCORD_BOT_TOKEN) {
+// In terminal mode, Discord token is optional
+if (!TERMINAL_MODE && !DISCORD_BOT_TOKEN) {
   console.error('Error: DISCORD_BOT_TOKEN is not set in environment variables.');
   process.exit(1);
 }
@@ -42,6 +49,10 @@ tools.addInterceptor(new TokenTruncationInterceptor(tokenTracker));
 tools.addInterceptor(new LoggingInterceptor());
 const compressor = new MemoryCompressor(groq, fileSystem);
 const enc = getEncoding('cl100k_base');
+
+// Track Groq API calls for debugging
+let groqCallCount = 0;
+let groqCallTypes = new Map<string, number>();
 
 // --- Types ---
 export interface NormalizedMessage {
@@ -203,7 +214,7 @@ SYSTEM SNAPSHOT:
       currentModel
     );
     
-    console.log(`[TOKEN] Context: ${contextStats.currentContextTokens} tokens (${contextStats.percentOfContextWindow.toFixed(1)}% of ${tokenTracker.getModelLimits(currentModel).contextWindow})`);
+    log(`[TOKEN] Context: ${contextStats.currentContextTokens} tokens (${contextStats.percentOfContextWindow.toFixed(1)}% of ${tokenTracker.getModelLimits(currentModel).contextWindow})`);
     
     let responseMessage = await safeChat(messages, toolDefs);
     
@@ -295,7 +306,14 @@ SYSTEM SNAPSHOT:
     responseMessage = parseInlineToolCalls(responseMessage);
 
     // Tool execution loop
+    let toolRound = 0;
     while (responseMessage.tool_calls && responseMessage.tool_calls.length > 0) {
+      if (toolRound >= MAX_TOOL_ROUNDS) {
+        log(`[TOOL] Maximum tool rounds (${MAX_TOOL_ROUNDS}) reached. Stopping tool execution.`);
+        break;
+      }
+      toolRound++;
+
       messages.push(responseMessage);
 
       const toolResults = await Promise.all(
@@ -303,7 +321,7 @@ SYSTEM SNAPSHOT:
           const { name, arguments: argsString } = toolCall.function;
           const args = JSON.parse(argsString);
 
-          console.log(`[TOOL] Executing ${name} in parallel with args:`, args);
+          log(`[TOOL] Executing ${name} in parallel with args:`, args);
 
           const result = await tools.execute(name, args);
 
@@ -330,7 +348,7 @@ SYSTEM SNAPSHOT:
     
     // Check for "NO_ACTION_REQUIRED"
     if (replyText.trim() === 'NO_ACTION_REQUIRED') {
-      console.log(`[PROCESSOR] LLM requested silent output for session ${sessionId}.`);
+      log(`[PROCESSOR] LLM requested silent output for session ${sessionId}.`);
     } else {
       if (replyText.length <= 2000) {
         await message.reply(replyText);
@@ -356,10 +374,12 @@ SYSTEM SNAPSHOT:
     await fileSystem.saveSession(sessionId, updatedHistory);
 
     // Trigger background compression if limits are exceeded
-    const historyTokens = updatedHistory.reduce((sum, m) => sum + enc.encode(m.content || JSON.stringify(m.tool_calls || '')).length, 0);
-    if (updatedHistory.length > 20 || historyTokens > 4000) {
-      console.log(`[COMPRESSOR] Session ${sessionId} history size (${updatedHistory.length} msgs, ${historyTokens} tokens) exceeded threshold. Compressing in background...`);
-      compressor.compressSession(sessionId, updatedHistory).catch((err: any) => console.error(`[COMPRESSOR] Error in background compression:`, err));
+    if (COMPRESSION_ENABLED) {
+      const historyTokens = updatedHistory.reduce((sum, m) => sum + enc.encode(m.content || JSON.stringify(m.tool_calls || '')).length, 0);
+      if (updatedHistory.length > 20 || historyTokens > 4000) {
+        log(`[COMPRESSOR] Session ${sessionId} history size (${updatedHistory.length} msgs, ${historyTokens} tokens) exceeded threshold. Compressing in background...`);
+        compressor.compressSession(sessionId, updatedHistory).catch((err: any) => console.error(`[COMPRESSOR] Error in background compression:`, err));
+      }
     }
 
   } catch (error: any) {
@@ -382,7 +402,7 @@ const kairos = new KairosEngine(async (tickMsg) => {
       .filter(f => f.endsWith('.json'))
       .map(f => f.replace('.json', ''));
 
-    console.log(`[KAIROS] Firing tick for ${sessionIds.length} sessions.`);
+    log(`[KAIROS] Firing tick for ${sessionIds.length} sessions.`);
     
     for (const sessionId of sessionIds) {
       // Map the generic tick message to a specific session
@@ -457,10 +477,29 @@ client.on('messageCreate', async (message: Message) => {
 
 client.once('ready', () => {
   if (client.user) {
-    console.log(`Boss Agent is online as ${client.user.tag}`);
-    kairos.start();
+    log(`Boss Agent is online as ${client.user.tag}`);
+    if (KAIROS_ENABLED) {
+      log('[FEATURE] Kairos proactive mode enabled');
+      kairos.start();
+    } else {
+      log('[FEATURE] Kairos proactive mode disabled - running in reactive mode only');
+    }
   }
 });
+
+// --- Terminal Mode ---
+if (TERMINAL_MODE) {
+  log('[TERMINAL] Starting in terminal mode...');
+  
+  // Create terminal adapter for a single session
+  const terminalSessionId = 'terminal-session';
+  const terminalAdapter = new TerminalAdapter(terminalSessionId, processMessage);
+  
+  terminalAdapter.start();
+} else {
+  // Discord mode
+  client.login(DISCORD_BOT_TOKEN);
+}
 
 /**
  * Split a long message into chunks that respect Discord's 2000 char limit.
@@ -484,5 +523,3 @@ function splitMessage(text: string, maxLength: number): string[] {
 
   return chunks;
 }
-
-client.login(DISCORD_BOT_TOKEN);

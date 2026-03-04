@@ -2,3 +2,4 @@
 node_modules/
 session_history/
 dist/
+data/large_outputs/*.txt

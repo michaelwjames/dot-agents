@@ -33,6 +33,15 @@ export class JulesTool implements Tool {
     if (args.action === 'list-sessions') finalTarget = 'jules-list-sessions';
 
     const cmdResult = await this.make.run(finalTarget, makeArgs);
-    return `STDOUT: ${cmdResult.stdout}\nSTDERR: ${cmdResult.stderr}\nExit Code: ${cmdResult.exitCode}`;
+    
+    // Return structured JSON output
+    const output = {
+      stdout: cmdResult.stdout,
+      stderr: cmdResult.stderr,
+      exitCode: cmdResult.exitCode,
+      success: cmdResult.exitCode === 0
+    };
+    
+    return JSON.stringify(output);
   }
 }

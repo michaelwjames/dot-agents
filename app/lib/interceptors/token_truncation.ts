@@ -2,6 +2,7 @@ import { ToolInterceptor } from './base.js';
 import { TokenTracker } from '../analytics/token_tracker.js';
 import fs from 'fs-extra';
 import path from 'path';
+import { log } from '../utils/logger.js';
 
 /**
  * Interceptor that saves large tool outputs to files instead of truncating them.
@@ -22,7 +23,7 @@ export class TokenTruncationInterceptor implements ToolInterceptor {
     const tokenCount = this.tokenTracker.countTokens(result);
 
     if (tokenCount > this.threshold) {
-      console.log(`[TRUNCATION] Tool "${toolName}" output (${tokenCount} tokens) exceeds threshold (${this.threshold}). Saving to file...`);
+      log(`[TRUNCATION] Tool "${toolName}" output (${tokenCount} tokens) exceeds threshold (${this.threshold}). Saving to file...`);
       
       // Save the large output to a file
       const outputDir = path.join(this.projectRoot, 'data', 'large_outputs');

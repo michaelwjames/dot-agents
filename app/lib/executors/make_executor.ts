@@ -2,6 +2,7 @@ import { exec, execSync } from 'child_process';
 import { promisify } from 'util';
 import { readFileSync, statSync } from 'fs';
 import { CommandResult } from './shell_executor.js';
+import { log, logWarn } from '../utils/logger.js';
 
 const execAsync = promisify(exec);
 
@@ -50,7 +51,7 @@ export class MakeExecutor {
       const mtime = stats.mtimeMs;
 
       if (force || mtime > this.lastMtime) {
-        console.log(`[MAKE] Reloading targets from ${this.makefilePath}...`);
+        log(`[MAKE] Reloading targets from ${this.makefilePath}...`);
         this.allowedTargets = this._parseTargets();
         this.helpCache = null; // Invalidate help cache
         this.lastMtime = mtime;
@@ -123,7 +124,7 @@ export class MakeExecutor {
     }
 
     const command = `make -f ${this.makefilePath} ${target}${argString}`;
-    console.log(`[MAKE] Running: ${command}`);
+    log(`[MAKE] Running: ${command}`);
 
     try {
       const { stdout, stderr } = await execAsync(command, { timeout: 60000 });
