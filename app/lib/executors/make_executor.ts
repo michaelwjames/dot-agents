@@ -1,6 +1,6 @@
 import { exec, execSync } from 'child_process';
 import { promisify } from 'util';
-import { readFileSync } from 'fs';
+import { readFileSync, statSync } from 'fs';
 import { CommandResult } from './shell_executor.js';
 
 const execAsync = promisify(exec);
@@ -8,15 +8,16 @@ const execAsync = promisify(exec);
 // Shell metacharacters that must never appear in target names or argument values
 const DANGEROUS_CHARS = /[;|&`$(){}[\]<>!\n\r\\]/;
 
-const MAX_OUTPUT_LENGTH = 5000; // Characters per stream
-
 export class MakeExecutor {
   private makefilePath: string;
   private allowedTargets: Set<string>;
+  private helpCache: string | null = null;
+  private lastMtime: number = 0;
 
   constructor(makefilePath = './Makefile') {
     this.makefilePath = makefilePath;
-    this.allowedTargets = this._parseTargets();
+    this.allowedTargets = new Set();
+    this.reload();
   }
 
   /**
@@ -41,10 +42,25 @@ export class MakeExecutor {
   }
 
   /**
-   * Reload allowed targets from the Makefile.
+   * Reload allowed targets from the Makefile if it has changed.
    */
-  reload(): void {
-    this.allowedTargets = this._parseTargets();
+  reload(force = false): void {
+    try {
+      const stats = statSync(this.makefilePath);
+      const mtime = stats.mtimeMs;
+
+      if (force || mtime > this.lastMtime) {
+        console.log(`[MAKE] Reloading targets from ${this.makefilePath}...`);
+        this.allowedTargets = this._parseTargets();
+        this.helpCache = null; // Invalidate help cache
+        this.lastMtime = mtime;
+      }
+    } catch (error) {
+      if (force) {
+        this.allowedTargets = this._parseTargets();
+        this.helpCache = null;
+      }
+    }
   }
 
   /**
@@ -52,6 +68,8 @@ export class MakeExecutor {
    * Derived from running 'make help'.
    */
   getHelp(): string {
+    if (this.helpCache) return this.helpCache;
+
     try {
       const helpOutput = execSync(`make -f ${this.makefilePath} help`, { encoding: 'utf8', timeout: 2000 });
       const lines = helpOutput.split('\n');
@@ -59,6 +77,8 @@ export class MakeExecutor {
         .map(line => line.trim())
         .filter(line => line.startsWith('make '))
         .join('; ');
+
+      this.helpCache = commands;
       return commands;
     } catch (error) {
       console.warn('Warning: Could not run "make help". Using fallback list.');
@@ -108,26 +128,16 @@ export class MakeExecutor {
     try {
       const { stdout, stderr } = await execAsync(command, { timeout: 60000 });
       return {
-        stdout: this._truncate(stdout),
-        stderr: this._truncate(stderr),
+        stdout: stdout.trim(),
+        stderr: stderr.trim(),
         exitCode: 0,
       };
     } catch (error: any) {
       return {
-        stdout: error.stdout ? this._truncate(error.stdout) : '',
-        stderr: error.stderr ? this._truncate(error.stderr) : this._truncate(error.message),
+        stdout: error.stdout ? error.stdout.trim() : '',
+        stderr: error.stderr ? error.stderr.trim() : error.message.trim(),
         exitCode: error.code || 1,
       };
     }
-  }
-
-  /**
-   * Truncate string if it exceeds MAX_OUTPUT_LENGTH
-   */
-  private _truncate(str: string): string {
-    if (!str) return '';
-    const trimmed = str.trim();
-    if (trimmed.length <= MAX_OUTPUT_LENGTH) return trimmed;
-    return `${trimmed.slice(0, MAX_OUTPUT_LENGTH)}\n\n[... Output truncated due to length ...]`;
   }
 }

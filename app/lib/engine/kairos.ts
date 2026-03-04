@@ -1,0 +1,58 @@
+import { NormalizedMessage } from '../../index.js';
+
+export type TickCallback = (message: NormalizedMessage) => Promise<void>;
+
+export class KairosEngine {
+  private intervalMs: number;
+  private onTick: TickCallback;
+  private timer: NodeJS.Timeout | null = null;
+
+  constructor(onTick: TickCallback, intervalMinutes: number = 30) {
+    this.onTick = onTick;
+    this.intervalMs = intervalMinutes * 60 * 1000;
+  }
+
+  /**
+   * Start the Kairos Heartbeat Engine
+   */
+  start(): void {
+    if (this.timer) return;
+    
+    console.log(`[KAIROS] Starting engine with ${this.intervalMs / 60000}m interval.`);
+    
+    this.timer = setInterval(async () => {
+      console.log(`[KAIROS] Heartbeat tick firing...`);
+      const syntheticMessage: NormalizedMessage = {
+        sessionId: 'AUTO_BROADCAST', // Placeholder, will be mapped to active sessions in integration
+        authorId: 'system-kairos',
+        authorTag: 'KairosEngine',
+        content: `[SYSTEM: KAIROS_TICK] Time: ${new Date().toISOString()}.
+Review your current context (tasks, session logs, recent work).
+IMPORTANT: Check for any active Jules sessions. Use 'jules list-sessions' to get metadata and 'jules list-activities' for specific sessions.
+If a Jules session is in 'AWAITING_USER_FEEDBACK' state, you MUST notify the Boss immediately with the details and ask for their feedback.
+If nothing requires attention, reply with 'NO_ACTION_REQUIRED'.
+If action is needed, use your tools or send a proactive message to the Boss.`,
+        reply: async (content: string) => console.log(`[KAIROS] Reply: ${content}`),
+        send: async (content: string) => console.log(`[KAIROS] Send: ${content}`),
+        sendTyping: async () => {}
+      };
+      
+      try {
+        await this.onTick(syntheticMessage);
+      } catch (err) {
+        console.error(`[KAIROS] Error during tick callback:`, err);
+      }
+    }, this.intervalMs);
+  }
+
+  /**
+   * Stop the Kairos Heartbeat Engine
+   */
+  stop(): void {
+    if (this.timer) {
+      clearInterval(this.timer);
+      this.timer = null;
+      console.log(`[KAIROS] Engine stopped.`);
+    }
+  }
+}
