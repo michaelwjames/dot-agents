@@ -81,7 +81,11 @@ async function enqueueTask(sessionId: string, task: () => Promise<void>) {
   sessionQueues.set(sessionId, newTask);
 }
 
-async function safeChat(msgs: any[], defs: any[]): Promise<any> {
+async function safeChat(msgs: any[], defs: any[], callType: string = 'main'): Promise<any> {
+  groqCallCount++;
+  groqCallTypes.set(callType, (groqCallTypes.get(callType) || 0) + 1);
+  log(`[GROQ] API call #${groqCallCount} (${callType}) - Total calls this session: ${groqCallCount}`);
+
   let attempts = 0;
   while (attempts < 3) {
     try {
@@ -137,6 +141,9 @@ async function processMessage(message: NormalizedMessage) {
       await writeFile(tempPath, buffer);
 
       try {
+        groqCallCount++;
+        groqCallTypes.set('transcribe', (groqCallTypes.get('transcribe') || 0) + 1);
+        log(`[GROQ] Transcription call #${groqCallCount} - Total calls this session: ${groqCallCount}`);
         userText = await groq.transcribe(tempPath);
         await message.reply(`🎤 *I heard:* "${userText}"`);
       } finally {
@@ -216,7 +223,7 @@ SYSTEM SNAPSHOT:
     
     log(`[TOKEN] Context: ${contextStats.currentContextTokens} tokens (${contextStats.percentOfContextWindow.toFixed(1)}% of ${tokenTracker.getModelLimits(currentModel).contextWindow})`);
     
-    let responseMessage = await safeChat(messages, toolDefs);
+    let responseMessage = await safeChat(messages, toolDefs, 'main');
     
     // Log the request for rate limit tracking
     tokenTracker.logRequest(contextStats.currentContextTokens);
@@ -339,7 +346,7 @@ SYSTEM SNAPSHOT:
       if (message.sendTyping) {
         await message.sendTyping();
       }
-      responseMessage = await safeChat(messages, toolDefs);
+      responseMessage = await safeChat(messages, toolDefs, `tool_round_${toolRound}`);
       responseMessage = parseInlineToolCalls(responseMessage);
     }
 

@@ -9,6 +9,7 @@ export class MemoryCompressor {
   private groq: GroqProvider;
   private fs: FileSystem;
   private model = 'llama-3.3-70b-versatile';
+  private static callCount = 0;
 
   constructor(groq: GroqProvider, fs: FileSystem) {
     this.groq = groq;
@@ -42,6 +43,8 @@ export class MemoryCompressor {
     ];
 
     try {
+      MemoryCompressor.callCount++;
+      log(`[GROQ] Compression call #${MemoryCompressor.callCount} - Total compression calls: ${MemoryCompressor.callCount}`);
       const summaryResponse = await this.groq.chat(summarizationMessages, []);
       const summaryText = summaryResponse.content;
 
