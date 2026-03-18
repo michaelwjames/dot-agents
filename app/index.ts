@@ -1,13 +1,10 @@
 import 'dotenv/config';
 import { Client, GatewayIntentBits, Partials, Message } from 'discord.js';
-import { writeFile, unlink, readdir } from 'fs/promises';
-import { tmpdir } from 'os';
-import path from 'path';
+import { readdir } from 'fs/promises';
 import { GroqProvider } from './lib/core/groq_provider.js';
 import { FileSystem } from './lib/data/file_system.js';
 import { ToolRegistry } from './lib/tools.js';
 import { TokenTracker } from './lib/analytics/token_tracker.js';
-import { getEncoding } from 'js-tiktoken';
 import { Nomenclature } from './lib/utils/nomenclature.js';
 import { TokenTruncationInterceptor } from './lib/interceptors/token_truncation.js';
 import { LoggingInterceptor } from './lib/interceptors/logging.js';
@@ -15,8 +12,8 @@ import { MemoryCompressor } from './lib/services/compressor.js';
 import { KairosEngine } from './lib/engine/kairos.js';
 import { log } from './lib/utils/logger.js';
 import { TerminalAdapter } from './lib/adapters/terminal.js';
-import { sanitizeHistory, stripInternalFields } from "./lib/history_sanitizer.js";
 import { ConsoleInterceptor } from './lib/utils/console_interceptor.js';
+import { BossAgentService, NormalizedMessage } from './lib/services/boss_agent_service.js';
 
 // Initialize console logging to files - this captures ALL console output
 ConsoleInterceptor.getInstance().intercept();
@@ -53,23 +50,15 @@ const tools = new ToolRegistry(fileSystem, nomenclature, tokenTracker);
 tools.addInterceptor(new TokenTruncationInterceptor(tokenTracker));
 tools.addInterceptor(new LoggingInterceptor());
 const compressor = new MemoryCompressor(groq, fileSystem);
-const enc = getEncoding('cl100k_base');
-
-// Track Groq API calls for debugging
-let groqCallCount = 0;
-let groqCallTypes = new Map<string, number>();
-
-// --- Types ---
-export interface NormalizedMessage {
-  sessionId: string;
-  authorId: string;
-  authorTag: string;
-  content: string;
-  attachments?: { url: string; contentType?: string }[];
-  reply: (content: string) => Promise<any>;
-  send: (content: string) => Promise<any>;
-  sendTyping?: () => Promise<void>;
-}
+const bossAgentService = new BossAgentService(
+  groq,
+  fileSystem,
+  tools,
+  tokenTracker,
+  compressor,
+  groqModels,
+  MAX_TOOL_ROUNDS
+);
 
 // --- Lane Queue Management ---
 const sessionQueues = new Map<string, Promise<void>>();
@@ -84,31 +73,6 @@ async function enqueueTask(sessionId: string, task: () => Promise<void>) {
     }
   });
   sessionQueues.set(sessionId, newTask);
-}
-
-async function safeChat(msgs: any[], defs: any[], callType: string = 'main'): Promise<any> {
-  groqCallCount++;
-  groqCallTypes.set(callType, (groqCallTypes.get(callType) || 0) + 1);
-  log(`[GROQ] API call #${groqCallCount} (${callType}) - Total calls this session: ${groqCallCount}`);
-
-  let attempts = 0;
-  while (attempts < 3) {
-    try {
-      return await groq.chat(msgs, defs);
-    } catch (err: any) {
-      if (err?.status === 400 && err?.error?.error?.code === 'tool_use_failed') {
-        attempts++;
-        console.warn(`[WARN] Model hallucinated tool call (attempt ${attempts}). Retrying...`);
-        msgs.push({
-          role: 'user',
-          content: 'CRITICAL ERROR: Your previous response caused a "tool_use_failed" error. You MUST output strictly valid JSON matching the tool schema. Do NOT output raw markdown or text.'
-        });
-        continue;
-      }
-      throw err;
-    }
-  }
-  throw new Error('Max retries exceeded for tool calls.');
 }
 
 // Load Nomenclature catalog on startup
@@ -128,386 +92,7 @@ const client = new Client({
  * Core reasoning and execution loop
  */
 async function processMessage(message: NormalizedMessage) {
-  const { sessionId } = message;
-
-  // Track tool execution patterns for loop detection (per-message, per-session)
-  let toolExecutionHistory: Array<{name: string, args: string}> = [];
-
-  try {
-    let userText: string | null = null;
-
-    // Handle voice/audio attachments — transcribe via Groq Whisper
-    const audioAttachment = message.attachments?.find(a => {
-      const ct = a.contentType || '';
-      return ct.startsWith('audio/') || ct.includes('ogg') || ct.includes('webm');
-    });
-
-    if (audioAttachment) {
-      const tempPath = path.join(tmpdir(), `boss_audio_${Date.now()}.ogg`);
-      const response = await fetch(audioAttachment.url);
-      const buffer = Buffer.from(await response.arrayBuffer());
-      await writeFile(tempPath, buffer);
-
-      try {
-        groqCallCount++;
-        groqCallTypes.set('transcribe', (groqCallTypes.get('transcribe') || 0) + 1);
-        log(`[GROQ] Transcription call #${groqCallCount} - Total calls this session: ${groqCallCount}`);
-        userText = await groq.transcribe(tempPath);
-        await message.reply(`🎤 *I heard:* "${userText}"`);
-      } finally {
-        await unlink(tempPath).catch(() => {});
-      }
-    }
-
-    // Handle text content
-    if (message.content) {
-      userText = message.content;
-    }
-
-    // Skip if no processable content
-    if (!userText) return;
-
-    // Send typing indicator
-    if (message.sendTyping) {
-      await message.sendTyping();
-    }
-
-    // Load context
-    const soulPrompt = await fileSystem.loadSoulPrompt();
-    const fileIndex = await fileSystem.getFileSystemIndex();
-    const history = await fileSystem.loadSession(sessionId);
-
-    const baseSystemPrompt = `You are the "Boss Agent," a strictly obedient but personality-rich AI assistant.
-
-CORE RULES:
-1. Always address the user as "Boss."
-2. For Jules AI agent operations (list sessions, get session, list activities, send message, approve plan, etc.), ALWAYS use the 'jules' tool — never run jules-* make targets directly via 'run_make'.
-3. For all other operations, use 'run_make' with a predefined make target. You cannot run arbitrary shell commands.
-4. You can save notes to memory using 'write_note'.
-5. You have access to a lightweight index of files in vault/, memory/, and skills/ directories. Files marked with [ALWAYS_REMEMBER] are especially important.
-6. Use the 'read_memory' tool to fetch the full content of any file from the index if you need it to answer the Boss.
-7. Keep your responses concise and action-oriented unless the Boss asks for detail.
-8. If the Boss sent a voice note, you received the transcribed text. Confirm what you heard before acting on ambiguous commands.
-9. If you receive a [SYSTEM: KAIROS_TICK] message, you are waking up autonomously. Review your current context (especially tasks in memory and active Jules sessions). If nothing requires attention, reply with exactly 'NO_ACTION_REQUIRED' to prevent spamming the chat. If action is needed, use your tools or send a proactive message.
-
-${soulPrompt ? `PERSONALITY:\n${soulPrompt}\n` : ''}`;
-
-    const sessionContextPrompt = `--- SESSION CONTEXT ---
-AVAILABLE FILES:
-${fileIndex}
-
-SYSTEM SNAPSHOT:
-- Session ID: ${sessionId}
-- Current Model: ${groqModels[0] || 'llama-3.3-70b-versatile'}
-- Memory Location: data/memory/
-- Vault Location: data/vault/
-`;
-
-    // Token-aware sliding window
-    const MAX_CONTEXT_TOKENS = 6000;
-    const HEADROOM = 1000; // Drop messages in chunks to keep cache stable
-
-    let currentTokens = enc.encode(baseSystemPrompt).length +
-                        enc.encode(sessionContextPrompt).length +
-                        enc.encode(userText).length + 500; // 500 safety margin for tool defs
-
-    // Add history from newest to oldest until limit reached.
-    // OPTIMIZATION: If the history exceeds the limit, we drop extra messages to create HEADROOM.
-    // This prevents the cache prefix from changing every single turn.
-    let historyToInclude: any[] = [];
-    let historyTokens = 0;
-    let limitReached = false;
-    for (let i = history.length - 1; i >= 0; i--) {
-      const msg = history[i];
-      const msgTokens = enc.encode(msg.content || JSON.stringify(msg.tool_calls || '')).length;
-      if (currentTokens + historyTokens + msgTokens > MAX_CONTEXT_TOKENS) {
-        limitReached = true;
-        break;
-      }
-      historyTokens += msgTokens;
-      historyToInclude.unshift(msg);
-    }
-
-    if (limitReached) {
-      // We hit the limit. Now we reduce historyToInclude until we have HEADROOM.
-      // This "chunked" dropping keeps the prefix stable for several turns.
-      while (historyToInclude.length > 1 && (currentTokens + historyTokens > (MAX_CONTEXT_TOKENS - HEADROOM))) {
-        const dropped = historyToInclude.shift();
-        const droppedTokens = enc.encode(dropped.content || JSON.stringify(dropped.tool_calls || '')).length;
-        historyTokens -= droppedTokens;
-      }
-      log(`[CACHE_OPT] Limit reached. Truncated history to ${historyToInclude.length} messages to create ${HEADROOM} token headroom for cache stability.`);
-    }
-
-    // ARCHITECTURE OPTIMIZATION FOR CACHING:
-    // [Base System (Stable)] -> [History (Incremental)] -> [Session Context (Volatile)] -> [User Message (Dynamic)]
-    // This maximizes the length of the stable prefix for Groq Prompt Caching.
-    let messages: any[] = [
-      { role: 'system', content: baseSystemPrompt },
-      ...historyToInclude,
-      { role: 'system', content: sessionContextPrompt },
-      { role: 'user', content: userText }
-    ];
-
-    const toolDefs = tools.getDefinitions();
-    
-    // Calculate and log context stats before sending request
-    const currentModel = groqModels[0] || 'llama-3.3-70b-versatile';
-    const contextStats = tokenTracker.calculateContextStats(
-      baseSystemPrompt + sessionContextPrompt,
-      historyToInclude,
-      userText,
-      toolDefs,
-      currentModel
-    );
-    
-    log(`[TOKEN] Context: ${contextStats.currentContextTokens} tokens (${contextStats.percentOfContextWindow.toFixed(1)}% of ${tokenTracker.getModelLimits(currentModel).contextWindow})`);
-    
-    let responseMessage = await safeChat(messages, toolDefs, 'main');
-    
-    // Log the request for rate limit tracking
-    tokenTracker.logRequest(contextStats.currentContextTokens);
-
-    // Helper to parse inline hallucinated tool calls from fallback models
-    const parseInlineToolCalls = (msg: any) => {
-      if (!msg.content) return msg;
-      
-      const inlineToolCalls = [];
-      let cleanedContent = msg.content;
-
-      // Format 1: <function/name>json</function>
-      const functionRegex1 = /<function\/([^>]+)>([\s\S]*?)<\/function>/g;
-      let match;
-      while ((match = functionRegex1.exec(msg.content)) !== null) {
-        const name = match[1];
-        const argsString = match[2].trim();
-        
-        try {
-          JSON.parse(argsString);
-          inlineToolCalls.push({
-            id: `call_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            type: 'function',
-            function: {
-              name,
-              arguments: argsString
-            }
-          });
-          cleanedContent = cleanedContent.replace(match[0], '').trim();
-        } catch (e) {
-          console.warn(`[WARN] Failed to parse inline tool call JSON for ${name}`);
-        }
-      }
-
-      // Format 2: <function/name={...}> - extract balanced JSON
-      const functionRegex2 = /<function\/([^=]+)=/g;
-      while ((match = functionRegex2.exec(msg.content)) !== null) {
-        const name = match[1];
-        const startIdx = match.index + match[0].length;
-        
-        // Find balanced JSON starting from startIdx
-        let depth = 0;
-        let endIdx = startIdx;
-        let foundStart = false;
-        
-        for (let i = startIdx; i < msg.content.length; i++) {
-          const char = msg.content[i];
-          if (char === '{') {
-            depth++;
-            foundStart = true;
-          } else if (char === '}') {
-            depth--;
-            if (foundStart && depth === 0) {
-              endIdx = i + 1;
-              break;
-            }
-          }
-        }
-        
-        if (foundStart && depth === 0) {
-          const argsString = msg.content.substring(startIdx, endIdx);
-          try {
-            JSON.parse(argsString);
-            inlineToolCalls.push({
-              id: `call_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-              type: 'function',
-              function: {
-                name,
-                arguments: argsString
-              }
-            });
-            const fullMatch = msg.content.substring(match.index, endIdx);
-            cleanedContent = cleanedContent.replace(fullMatch, '').trim();
-          } catch (e) {
-            console.warn(`[WARN] Failed to parse inline tool call JSON for ${name}`);
-          }
-        }
-      }
-
-      if (inlineToolCalls.length > 0) {
-        msg.tool_calls = (msg.tool_calls || []).concat(inlineToolCalls);
-        msg.content = cleanedContent || null;
-      }
-      return msg;
-    };
-
-    responseMessage = parseInlineToolCalls(responseMessage);
-    let toolExecutionHistory: any[] = [];
-    let shouldSendFinalResponse = true; // Track if we should send final response
-
-    let toolRound = 0;
-    while (responseMessage.tool_calls && responseMessage.tool_calls.length > 0) {
-      if (toolRound >= MAX_TOOL_ROUNDS) {
-        log(`[TOOL] Maximum tool rounds (${MAX_TOOL_ROUNDS}) reached. Stopping tool execution.`);
-        break;
-      }
-      toolRound++;
-
-      // Check for repeated tool calls (loop detection)
-      const currentToolCalls = responseMessage.tool_calls.map((tc: any) => ({
-        name: tc.function.name,
-        args: tc.function.arguments
-      }));
-
-      // Detect if we're repeating the same tools
-      const repeatCount = toolExecutionHistory.filter((h, idx) => {
-        const recentHistory = toolExecutionHistory.slice(Math.max(0, idx - 2));
-        return recentHistory.some((h: any) => 
-          currentToolCalls.some((ct: any) => ct.name === h.name && ct.args === h.args)
-        );
-      }).length;
-
-      if (repeatCount >= 3) {
-        log(`[LOOP_DETECTION] Detected repeated tool execution pattern. Stopping to prevent infinite loop.`);
-        responseMessage.tool_calls = [];
-        responseMessage.content = 'Error: I detected a loop in tool execution. Please try a different approach.';
-        break;
-      }
-
-      // Track tool execution
-      for (const tc of currentToolCalls) {
-        toolExecutionHistory.push({ name: tc.name, args: tc.args });
-      }
-      // Keep only recent history
-      if (toolExecutionHistory.length > 20) {
-        toolExecutionHistory = toolExecutionHistory.slice(-20);
-      }
-
-      messages.push(responseMessage);
-
-      const toolResults = await Promise.all(
-        responseMessage.tool_calls.map(async (toolCall: any) => {
-          const { name, arguments: argsString } = toolCall.function;
-          const args = JSON.parse(argsString);
-
-          log(`[TOOL] Executing ${name} in parallel with args:`, args);
-
-          const result = await tools.execute(name, args, { sessionId, send: message.send });
-
-          return {
-            role: "tool",
-            tool_call_id: toolCall.id,
-            name,
-            content: result,
-          };
-        })
-      );
-
-      // Filter out tool results that have the no-response marker
-      const filteredToolResults = toolResults.filter(tr => {
-        try {
-          const parsed = JSON.parse(tr.content);
-          return parsed.stdout !== "__NO_RESPONSE_NEEDED__";
-        } catch {
-          return true; // Keep non-JSON results
-        }
-      });
-
-      // Check if any tool used the no-response pattern
-      const hasNoResponseTool = toolResults.some(tr => {
-        try {
-          const parsed = JSON.parse(tr.content);
-          return parsed.stdout === "__NO_RESPONSE_NEEDED__";
-        } catch {
-          return false;
-        }
-      });
-
-      // If any tool used no-response pattern, skip this entire round
-      if (hasNoResponseTool) {
-        shouldSendFinalResponse = false;
-        break;
-      }
-
-      // Only add tool results and continue conversation if there are results to process
-      if (filteredToolResults.length > 0) {
-        messages.push(...filteredToolResults.map(tr => ({ ...tr, content: stripInternalFields(tr.content) })));
-
-        // Refresh typing indicator between tool calls
-        if (message.sendTyping) {
-          await message.sendTyping();
-        }
-        responseMessage = await safeChat(messages, toolDefs, `tool_round_${toolRound}`);
-        responseMessage = parseInlineToolCalls(responseMessage);
-      } else {
-        // All tool results were filtered out, end the conversation loop
-        shouldSendFinalResponse = false;
-        break;
-      }
-    }
-
-    // Send final response (Discord has a 2000 char limit per message)
-    const replyText = responseMessage.content || 'Done, Boss. No further output.';
-    
-    // Check if we should skip sending final response (no-response pattern)
-    if (!shouldSendFinalResponse) {
-      log(`[PROCESSOR] Skipping final response due to no-response pattern for session ${sessionId}.`);
-      return;
-    }
-    
-    // Check for "NO_ACTION_REQUIRED"
-    if (replyText.trim() === 'NO_ACTION_REQUIRED') {
-      log(`[PROCESSOR] LLM requested silent output for session ${sessionId}.`);
-    } else {
-      if (replyText.length <= 2000) {
-        await message.reply(replyText);
-      } else {
-        // Split long responses into chunks
-        const chunks = splitMessage(replyText, 2000);
-        for (const chunk of chunks) {
-          await message.send(chunk);
-        }
-      }
-    }
-
-    // Save history (up to last 50 messages, sliding window will handle context on load)
-    messages.push(responseMessage);
-    
-    // We want to exclude the initial system prompt from the history, 
-    // but keep session summaries which also use the 'system' role.
-    const updatedHistory = messages.filter((m: any, index: number) => {
-      if (index === 0 && m.role === 'system') return false; // Skip the main system prompt
-      return true;
-    }).slice(-50);
-    
-    await fileSystem.saveSession(sessionId, sanitizeHistory(updatedHistory));
-
-    // Trigger background compression if limits are exceeded
-    if (COMPRESSION_ENABLED) {
-      const historyTokens = updatedHistory.reduce((sum, m) => sum + enc.encode(m.content || JSON.stringify(m.tool_calls || '')).length, 0);
-      if (updatedHistory.length > 20 || historyTokens > 4000) {
-        log(`[COMPRESSOR] Session ${sessionId} history size (${updatedHistory.length} msgs, ${historyTokens} tokens) exceeded threshold. Compressing in background...`);
-        compressor.compressSession(sessionId, updatedHistory).catch((err: any) => console.error(`[COMPRESSOR] Error in background compression:`, err));
-      }
-    }
-
-  } catch (error: any) {
-    console.error('Error handling message:', error);
-    try {
-      await message.reply(`Sorry Boss, I hit a snag: ${error.message}`);
-    } catch (sendError) {
-      console.error('Could not send error message:', sendError);
-    }
-  }
+  return bossAgentService.processMessage(message);
 }
 
 // --- Kairos Engine Initialization ---
@@ -627,27 +212,4 @@ if (TERMINAL_MODE) {
 } else {
   // Discord mode
   client.login(DISCORD_BOT_TOKEN);
-}
-
-/**
- * Split a long message into chunks that respect Discord's 2000 char limit.
- */
-function splitMessage(text: string, maxLength: number): string[] {
-  const chunks: string[] = [];
-  let remaining = text;
-
-  while (remaining.length > maxLength) {
-    let splitIndex = remaining.lastIndexOf('\n', maxLength);
-    if (splitIndex === -1 || splitIndex < maxLength / 2) {
-      splitIndex = maxLength;
-    }
-    chunks.push(remaining.slice(0, splitIndex));
-    remaining = remaining.slice(splitIndex).trimStart();
-  }
-
-  if (remaining.length > 0) {
-    chunks.push(remaining);
-  }
-
-  return chunks;
 }

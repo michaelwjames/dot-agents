@@ -3,3 +3,8 @@ node_modules/
 session_history/
 dist/
 data/large_outputs/*.txt
+*.log
+**/*.js
+**/*.js.map
+**/*.d.ts
+**/*.d.ts.map

@@ -1,0 +1,23 @@
+{
+  "version": 2,
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": "/backend/src/index.ts"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/frontend/dist/$1"
+    }
+  ],
+  "functions": {
+    "backend/src/index.ts": {
+      "includeFiles": [
+        "app/**",
+        "data/**",
+        ".env",
+        "soul.md"
+      ]
+    }
+  }
+}

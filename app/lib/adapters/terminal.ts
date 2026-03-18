@@ -1,5 +1,5 @@
 import { createInterface } from 'readline';
-import type { NormalizedMessage } from '../../index.js';
+import { NormalizedMessage } from '../services/boss_agent_service.js';
 import { log } from '../utils/logger.js';
 
 /**

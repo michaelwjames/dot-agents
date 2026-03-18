@@ -1,4 +1,4 @@
-import { ToolInterceptor } from './base.js';
+import type { ToolInterceptor } from './base.js';
 import { log } from '../utils/logger.js';
 
 /**

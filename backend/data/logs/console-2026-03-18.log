@@ -1,0 +1,2 @@
+[12:28:56.750] WARN: [NOMENCLATURE] Could not load repo catalog: Command failed: gh repo list --json name,url --limit 100
+/bin/sh: 1: gh: not found

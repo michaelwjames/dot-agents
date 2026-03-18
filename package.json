@@ -19,16 +19,16 @@
     "dotenv": "^16.4.5",
     "fs-extra": "^11.3.3",
     "groq-sdk": "^0.10.0",
-    "jest": "^30.2.0",
     "js-tiktoken": "^1.0.21",
     "ora": "^8.2.0"
   },
   "devDependencies": {
     "@jest/globals": "^30.2.0",
     "@types/fs-extra": "^11.0.4",
-    "@types/jest": "^30.0.0",
+    "@types/jest": "30.0.0",
     "@types/node": "^25.3.0",
-    "ts-jest": "^29.4.6",
+    "jest": "30.2.0",
+    "ts-jest": "29.4.6",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   }

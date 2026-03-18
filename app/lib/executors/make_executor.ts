@@ -1,13 +1,13 @@
 import { exec, execSync } from 'child_process';
 import { promisify } from 'util';
 import { readFileSync, statSync } from 'fs';
-import { CommandResult } from './shell_executor.js';
+import type { CommandResult } from './shell_executor.js';
 import { log, logWarn } from '../utils/logger.js';
 
 const execAsync = promisify(exec);
 
 // Shell metacharacters that must never appear in target names or argument values
-const DANGEROUS_CHARS = /[;|&`$(){}[\]<>!\n\r\\]/;
+const DANGEROUS_CHARS = /[;|&\\`\$(){}[\]<>!\n\r\\]/;
 
 export class MakeExecutor {
   private makefilePath: string;
@@ -115,7 +115,7 @@ export class MakeExecutor {
 
     // Handle camelCase to UPPER_CASE
     if (normalized !== normalized.toUpperCase()) {
-      normalized = key.replace(/([a-z])([A-Z])/g, '$1_$2').toUpperCase();
+      normalized = key.replace(/([a-z])([A-Z])/g, '_').toUpperCase();
     }
 
     return normalized;

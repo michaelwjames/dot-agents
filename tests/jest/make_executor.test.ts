@@ -19,8 +19,8 @@ describe('MakeExecutor and TokenTruncationInterceptor', () => {
     const result = await interceptor.postExecute('test_tool', {}, longOutput);
 
     expect(tokenTracker.countTokens(result)).toBeGreaterThan(0);
-    expect(result).toContain('[LARGE OUTPUT SAVED]');
-    expect(result).toContain('File: data/large_outputs/test_tool_');
+    expect(result).toContain('[TRUNCATED]');
+    expect(result).toContain('data/large_outputs/large_output_');
   });
 
   test('TokenTruncationInterceptor does not truncate short output', async () => {
