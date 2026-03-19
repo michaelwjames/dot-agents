@@ -4,7 +4,7 @@
 
 - If the instruction is to 'review', then read `/.agents/on-demand/auditor/auditor.md` to find out who you are.
 - If the instruction asks you to orchestrate (delegate), then read `/.agents/on-demand/orchestrator/orchestrator.md` to find out who you are.
-- If the instruction asks you to document, then read `/.agents/on-demand/chronicler/chronicler.md` to find out who you are.
+- If the instruction asks you to write documentation or research, then read `/.agents/on-demand/chronicler/chronicler.md` to find out who you are.
 - Otherwise, unless explicitly given another agent persona, read `/.agents/on-demand/director/director.md` to find out who you are.
 
 ## Changelog Requirements
