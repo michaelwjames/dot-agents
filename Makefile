@@ -2,7 +2,7 @@
 # This provides convenient commands for managing the .agents subtree
 # Works from both the .agents directory and project root
 
-.PHONY: help update push setup status clean
+.PHONY: help update push setup status clean pr
 
 # Detect if we're in the .agents directory or project root
 ifeq ($(notdir $(CURDIR)),.agents)
@@ -21,6 +21,7 @@ help:
 	@echo "  make setup    - Add .agents subtree to a new project"
 	@echo "  make update   - Pull latest changes from dot-agents repository"
 	@echo "  make push     - Push local changes to dot-agents repository"
+	@echo "  make pr       - Create pull request for changes"
 	@echo "  make status   - Show subtree status and remotes"
 	@echo "  make clean    - Remove .agents subtree (use with caution)"
 	@echo ""
@@ -86,5 +87,23 @@ sync: update
 		echo "Local changes detected, pushing..."; \
 		$(MAKE) push; \
 	else \
-		echo "No local changes to push"; \
+		@echo "No local changes to push"; \
+	fi
+
+# Create pull request for changes
+pr:
+	@echo "Creating pull request for .agents changes..."
+	@cd $(GIT_ROOT) && if ! git diff --quiet --cached HEAD -- .agents 2>/dev/null || ! git diff --quiet HEAD -- .agents; then \
+		echo "Local changes detected, creating PR..."; \
+		BRANCH_NAME="agents-update-$$(date +%Y%m%d-%H%M%S)"; \
+		echo "Creating branch: $$BRANCH_NAME"; \
+		cd $(GIT_ROOT) && git checkout -b $$BRANCH_NAME; \
+		cd $(GIT_ROOT) && git add .agents; \
+		cd $(GIT_ROOT) && git commit -m "Update .agents: $$(git status --porcelain .agents | head -1 | cut -c4-)"; \
+		echo "Branch created and changes committed."; \
+		echo "To create PR, run:"; \
+		echo "  gh pr create --title 'Update .agents' --body 'Automated .agents update' --base main --head $$BRANCH_NAME"; \
+		echo "Or visit GitHub to create PR manually."; \
+	else \
+		echo "No local changes to create PR from."; \
 	fi

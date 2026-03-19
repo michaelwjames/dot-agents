@@ -1,4 +1,4 @@
-# Agent Ecosystem (.agents)
+# .agents
 
 This directory contains an autonomous agent ecosystem for software development and maintenance. It is designed as a reusable, drop-in solution that can be added to any repository using Git Subtree.
 
@@ -7,22 +7,27 @@ This directory contains an autonomous agent ecosystem for software development a
 Add this agent ecosystem to any repository in seconds:
 
 ```bash
-# Option 1: Git Subtree Setup
 git remote add dot-agents https://github.com/michaelwjames/dot-agents.git
 git subtree add --prefix=.agents dot-agents main --squash
-
-# Option 2: Setup Script
-curl -s https://raw.githubusercontent.com/michaelwjames/dot-agents/main/INSTALL.sh | bash
 ```
 
 ## Managing Updates
 
-Use the included Makefile from the root of your project to keep agents synced:
+Use the included Makefile to keep agents synced. Commands work from both the project root and the `.agents` directory:
 
 ```bash
+# From project root
 make -C .agents update  # Pull latest updates from central repo
 make -C .agents push    # Push your improvements back
+make -C .agents pr      # Create pull request for changes
 make -C .agents status  # Check subtree status
+
+# From .agents directory (cd .agents first)
+make update             # Pull latest updates from central repo
+make push               # Push your improvements back
+make pr                 # Create pull request for changes
+make status             # Check subtree status
+make help               # Show all available commands
 ```
 *See `SUBTREE_WORKFLOW.md` for detailed git subtree operations.*
 
