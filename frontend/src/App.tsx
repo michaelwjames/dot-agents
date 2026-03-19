@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import { Send, Mic, LogOut, Copy, Check, BarChart2 } from 'lucide-react';
+import { Send, Mic, LogOut, Copy, Check, BarChart2, Menu, X } from 'lucide-react';
 
 interface TokenStats {
   inputTokens?: number;
@@ -15,7 +15,6 @@ interface TokenStats {
   tpdUsed?: number;
   error?: string;
 }
-import { Send, Mic, LogOut, Menu, X, Copy, Check } from 'lucide-react';
 
 interface Message {
   role: 'user' | 'assistant' | 'system' | 'tool';

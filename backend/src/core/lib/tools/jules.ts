@@ -10,6 +10,8 @@ const DISCORD_CONTENT_LIMIT = 1900; // Leave some buffer under 2000 limit
  * For now, it is a stub that will be fully functional after Spec #11.
  */
 export class JulesTool implements Tool {
+  private client: JulesClient;
+
   private _toRelativeTime(isoTimestamp: string): string {
     const parsed = Date.parse(isoTimestamp);
     if (Number.isNaN(parsed)) return isoTimestamp;
@@ -173,7 +175,7 @@ export class JulesTool implements Tool {
           const feedbackResult = await this.client.listActivities(args.sessionId, {
             pageSize: 10,
           });
-          const lastAgentMessage = feedbackResult.activities.reverse().find(act => act.agentMessaged);
+          const lastAgentMessage = feedbackResult.activities.reverse().find((act: Activity) => act.agentMessaged);
           if (lastAgentMessage) {
             stdout = `Session: ${args.sessionId}\nLast agent message:\n${lastAgentMessage.agentMessaged?.agentMessage}`;
           } else {
