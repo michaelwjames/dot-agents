@@ -1,4 +1,4 @@
-import { FileSystem } from '../../app/lib/data/file_system.js';
+import { FileSystem } from '../../backend/src/core/lib/data/file_system.js';
 
 describe('FileSystem Chunking', () => {
   let fs: FileSystem;

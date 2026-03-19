@@ -1,7 +1,7 @@
 import { jest } from '@jest/globals';
 
 // Mock the logger BEFORE importing the interceptor
-jest.unstable_mockModule('../../app/lib/utils/logger.js', () => ({
+jest.unstable_mockModule('../../backend/src/core/lib/utils/logger.js', () => ({
   log: jest.fn(),
   logError: jest.fn(),
   logWarn: jest.fn(),
@@ -9,8 +9,8 @@ jest.unstable_mockModule('../../app/lib/utils/logger.js', () => ({
   logDebug: jest.fn(),
 }));
 
-const { LoggingInterceptor } = await import('../../app/lib/interceptors/logging.js');
-const { log } = await import('../../app/lib/utils/logger.js');
+const { LoggingInterceptor } = await import('../../backend/src/core/lib/interceptors/logging.js');
+const { log } = await import('../../backend/src/core/lib/utils/logger.js');
 
 describe('LoggingInterceptor', () => {
   let interceptor: LoggingInterceptor;

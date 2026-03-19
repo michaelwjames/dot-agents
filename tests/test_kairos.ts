@@ -1,5 +1,5 @@
-import { KairosEngine } from '../app/lib/engine/kairos.js';
-import { NormalizedMessage } from '../app/index.js';
+import { KairosEngine } from '../backend/src/core/lib/engine/kairos.js';
+import { NormalizedMessage } from '../backend/src/core/index.js';
 
 async function testKairos() {
   console.log("Starting Kairos Test...");

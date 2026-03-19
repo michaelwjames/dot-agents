@@ -1,5 +1,5 @@
 import { describe, it, expect, jest, beforeEach } from '@jest/globals';
-import { JulesTool } from '../../app/lib/tools/jules.js';
+import { JulesTool } from '../../backend/src/core/lib/tools/jules.js';
 
 describe('JulesTool', () => {
   let mockMake: any;

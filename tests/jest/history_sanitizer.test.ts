@@ -1,5 +1,5 @@
 import { describe, it, expect } from '@jest/globals';
-import { sanitizeHistory, stripInternalFields } from '../../app/lib/history_sanitizer.js';
+import { sanitizeHistory, stripInternalFields } from '../../backend/src/core/lib/history_sanitizer.js';
 
 describe('History Sanitizer', () => {
   describe('stripInternalFields', () => {

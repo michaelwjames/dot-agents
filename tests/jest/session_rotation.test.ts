@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from '@jest/globals';
-import { FileSystem } from '../../app/lib/data/file_system.js';
+import { FileSystem } from '../../backend/src/core/lib/data/file_system.js';
 import fs from 'fs-extra';
 import path from 'path';
 
@@ -20,7 +20,7 @@ describe('FileSystem Session Rotation', () => {
 
   it('should return empty history if lastActivityAt is older than 10 minutes', async () => {
     const sessionId = 'old-session';
-    const filePath = path.join(testSessionDir, `${sessionId}.json`);
+    const filePath = path.join(testSessionDir, `${sessionId}.tson`);
     const oldMessages = [{ role: 'user', content: 'hello' }];
     const oldTime = Date.now() - 11 * 60 * 1000;
 
@@ -31,13 +31,13 @@ describe('FileSystem Session Rotation', () => {
 
     // Check if archived file exists
     const files = await fs.readdir(testSessionDir);
-    const archivedFile = files.find(f => f.startsWith(`${sessionId}_`) && f.endsWith('.json'));
+    const archivedFile = files.find(f => f.startsWith(`${sessionId}_`) && f.endsWith('.tson'));
     expect(archivedFile).toBeDefined();
   });
 
   it('should return history if lastActivityAt is recent', async () => {
     const sessionId = 'new-session';
-    const filePath = path.join(testSessionDir, `${sessionId}.json`);
+    const filePath = path.join(testSessionDir, `${sessionId}.tson`);
     const messages = [{ role: 'user', content: 'hello' }];
     const recentTime = Date.now() - 5 * 60 * 1000;
 
@@ -49,7 +49,7 @@ describe('FileSystem Session Rotation', () => {
 
   it('should handle legacy array format using mtime for rotation', async () => {
     const sessionId = 'legacy-session';
-    const filePath = path.join(testSessionDir, `${sessionId}.json`);
+    const filePath = path.join(testSessionDir, `${sessionId}.tson`);
     const oldMessages = [{ role: 'user', content: 'legacy' }];
 
     await fs.writeJson(filePath, oldMessages);
@@ -62,13 +62,13 @@ describe('FileSystem Session Rotation', () => {
     expect(history).toEqual([]);
 
     const files = await fs.readdir(testSessionDir);
-    const archivedFile = files.find(f => f.startsWith(`${sessionId}_`) && f.endsWith('.json'));
+    const archivedFile = files.find(f => f.startsWith(`${sessionId}_`) && f.endsWith('.tson'));
     expect(archivedFile).toBeDefined();
   });
 
   it('should persist lastActivityAt when saving a session', async () => {
     const sessionId = 'save-session';
-    const filePath = path.join(testSessionDir, `${sessionId}.json`);
+    const filePath = path.join(testSessionDir, `${sessionId}.tson`);
     const messages = [{ role: 'user', content: 'hello' }];
 
     const before = Date.now();

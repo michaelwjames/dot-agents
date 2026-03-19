@@ -27,7 +27,7 @@ export class ToolRegistry {
     this.register(new ReadMemoryTool(fileSystem));
     this.register(new GetContextStatsTool(tokenTracker));
     this.register(new JulesTool(this.make));
-    this.register(new DisplayLargeOutputTool());
+    this.register(new DisplayLargeOutputTool(fileSystem));
   }
 
   register(tool: Tool) {

@@ -1,5 +1,5 @@
 import { jest } from '@jest/globals';
-import { ToolRegistry } from '../../app/lib/tools.js';
+import { ToolRegistry } from '../../backend/src/core/lib/tools.js';
 
 describe('ToolRegistry', () => {
   let nomenclatureMock: any;

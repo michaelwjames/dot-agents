@@ -1,7 +1,7 @@
 import { jest } from '@jest/globals';
-import { MakeExecutor } from '../../app/lib/executors/make_executor.js';
-import { TokenTracker } from '../../app/lib/analytics/token_tracker.js';
-import { TokenTruncationInterceptor } from '../../app/lib/interceptors/token_truncation.js';
+import { MakeExecutor } from '../../backend/src/core/lib/executors/make_executor.js';
+import { TokenTracker } from '../../backend/src/core/lib/analytics/token_tracker.js';
+import { TokenTruncationInterceptor } from '../../backend/src/core/lib/interceptors/token_truncation.js';
 
 describe('MakeExecutor and TokenTruncationInterceptor', () => {
   let executor: MakeExecutor;

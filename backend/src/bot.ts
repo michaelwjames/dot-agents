@@ -1,19 +1,19 @@
 import 'dotenv/config';
 import { Client, GatewayIntentBits, Partials, Message } from 'discord.js';
 import { readdir } from 'fs/promises';
-import { GroqProvider } from './lib/core/groq_provider.js';
-import { FileSystem } from './lib/data/file_system.js';
-import { ToolRegistry } from './lib/tools.js';
-import { TokenTracker } from './lib/analytics/token_tracker.js';
-import { Nomenclature } from './lib/utils/nomenclature.js';
-import { TokenTruncationInterceptor } from './lib/interceptors/token_truncation.js';
-import { LoggingInterceptor } from './lib/interceptors/logging.js';
-import { MemoryCompressor } from './lib/services/compressor.js';
-import { KairosEngine } from './lib/engine/kairos.js';
-import { log } from './lib/utils/logger.js';
-import { TerminalAdapter } from './lib/adapters/terminal.js';
-import { ConsoleInterceptor } from './lib/utils/console_interceptor.js';
-import { BossAgentService, NormalizedMessage } from './lib/services/boss_agent_service.js';
+import { GroqProvider } from './core/lib/core/groq_provider.js';
+import { FileSystem } from './core/lib/data/file_system.js';
+import { ToolRegistry } from './core/lib/tools.js';
+import { TokenTracker } from './core/lib/analytics/token_tracker.js';
+import { Nomenclature } from './core/lib/utils/nomenclature.js';
+import { TokenTruncationInterceptor } from './core/lib/interceptors/token_truncation.js';
+import { LoggingInterceptor } from './core/lib/interceptors/logging.js';
+import { MemoryCompressor } from './core/lib/services/compressor.js';
+import { KairosEngine } from './core/lib/engine/kairos.js';
+import { log } from './core/lib/utils/logger.js';
+import { TerminalAdapter } from './core/lib/adapters/terminal.js';
+import { ConsoleInterceptor } from './core/lib/utils/console_interceptor.js';
+import { BossAgentService, NormalizedMessage } from './core/lib/services/boss_agent_service.js';
 
 // Initialize console logging to files - this captures ALL console output
 ConsoleInterceptor.getInstance().intercept();

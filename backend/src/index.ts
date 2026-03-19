@@ -9,16 +9,16 @@ import fs from 'fs';
 import multer from 'multer';
 import { tmpdir } from 'os';
 
-import { GroqProvider } from '../../app/lib/core/groq_provider.js';
-import { FileSystem } from '../../app/lib/data/file_system.js';
-import { ToolRegistry } from '../../app/lib/tools.js';
-import { TokenTracker } from '../../app/lib/analytics/token_tracker.js';
-import { Nomenclature } from '../../app/lib/utils/nomenclature.js';
-import { TokenTruncationInterceptor } from '../../app/lib/interceptors/token_truncation.js';
-import { LoggingInterceptor } from '../../app/lib/interceptors/logging.js';
-import { MemoryCompressor } from '../../app/lib/services/compressor.js';
-import { BossAgentService } from '../../app/lib/services/boss_agent_service.js';
-import type { NormalizedMessage } from '../../app/lib/services/boss_agent_service.js';
+import { GroqProvider } from './core/lib/core/groq_provider.js';
+import { FileSystem } from './core/lib/data/file_system.js';
+import { ToolRegistry } from './core/lib/tools.js';
+import { TokenTracker } from './core/lib/analytics/token_tracker.js';
+import { Nomenclature } from './core/lib/utils/nomenclature.js';
+import { TokenTruncationInterceptor } from './core/lib/interceptors/token_truncation.js';
+import { LoggingInterceptor } from './core/lib/interceptors/logging.js';
+import { MemoryCompressor } from './core/lib/services/compressor.js';
+import { BossAgentService } from './core/lib/services/boss_agent_service.js';
+import type { NormalizedMessage } from './core/lib/services/boss_agent_service.js';
 
 dotenv.config();
 

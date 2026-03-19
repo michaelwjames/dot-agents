@@ -30,7 +30,7 @@ async function testFileSystem() {
   await fs.remove('./test_vault');
   await fs.remove('./test_memory');
   await fs.remove('./test_skills');
-  await fs.remove('./session_history/test_session.json');
+  await fs.remove('./session_history/test_session.tson');
   
   console.log('FileSystem tests passed!');
 }
