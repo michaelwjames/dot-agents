@@ -2,6 +2,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import { db } from './turso_db.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -21,15 +22,11 @@ export type FileChunk = FileContent;
 export class FileSystem {
   private projectRoot: string;
   private bundledDataRoot: string;
-  private writableDataRoot: string;
   private vaultPath: string;
-  private memoryPath: string;
   private skillsPath: string;
-  private largeOutputsPath: string;
-  private sessionHistoryPath: string;
   private soulPath: string;
 
-  constructor(vaultPath?: string, memoryPath?: string, skillsPath?: string) {
+  constructor(vaultPath?: string, _memoryPath?: string, skillsPath?: string) {
     const candidateRoots = [
       process.cwd(),
       path.resolve(__dirname, '..', '..', '..', '..', '..', '..'),
@@ -53,13 +50,9 @@ export class FileSystem {
     }
 
     this.bundledDataRoot = path.join(this.projectRoot, 'data');
-    this.writableDataRoot = process.env.BOSS_WRITABLE_DATA_DIR || this.bundledDataRoot;
 
     this.vaultPath = vaultPath || path.join(this.bundledDataRoot, 'vault');
-    this.memoryPath = memoryPath || path.join(this.writableDataRoot, 'memory');
     this.skillsPath = skillsPath || path.join(this.bundledDataRoot, 'skills');
-    this.largeOutputsPath = path.join(this.writableDataRoot, 'large_outputs');
-    this.sessionHistoryPath = path.join(this.writableDataRoot, 'session_history');
     this.soulPath = path.join(this.bundledDataRoot, 'soul.md');
   }
 
@@ -75,11 +68,18 @@ export class FileSystem {
   }
 
   async getFileSystemIndex(): Promise<string> {
-    // Sort all file lists alphabetically to ensure a stable index for caching
+    // Vault and Skills are static/bundled files
     const vaultFiles = (await this._readDir(this.vaultPath)).sort((a, b) => a.file.localeCompare(b.file));
-    const memoryFiles = (await this._readDir(this.memoryPath)).sort((a, b) => a.file.localeCompare(b.file));
     const skillsFiles = (await this._readDir(this.skillsPath)).sort((a, b) => a.file.localeCompare(b.file));
-    const largeOutputs = (await this._readDir(this.largeOutputsPath, false)).sort((a, b) => a.file.localeCompare(b.file));
+
+    // Memory and Large Outputs are now in DB (using memory table for both for simplicity, or just memory)
+    // Spec says: memory table in Turso replaces data/memory/*.md
+    const memoryResult = await db.execute('SELECT filename, content, always_remember FROM memory ORDER BY filename ASC');
+    const memoryFiles = memoryResult.rows.map(row => ({
+      file: String(row.filename),
+      content: String(row.content),
+      always_remember: Boolean(row.always_remember)
+    }));
 
     let index = "--- FILE SYSTEM INDEX ---\n";
     
@@ -91,11 +91,10 @@ export class FileSystem {
         }).join('\n')
       : "No vault notes found.\n";
 
-    index += "\n\n[MEMORY (data/memory/)]\n";
+    index += "\n\n[MEMORY (Database)]\n";
     index += memoryFiles.length > 0
       ? memoryFiles.map(f => {
-          const isAlways = f.content.includes('always_remember: true');
-          return `- ${f.file} (${f.content.length} bytes)${isAlways ? ' [ALWAYS_REMEMBER]' : ''}`;
+          return `- ${f.file} (${f.content.length} bytes)${f.always_remember ? ' [ALWAYS_REMEMBER]' : ''}`;
         }).join('\n')
       : "No memory notes found.\n";
 
@@ -104,12 +103,6 @@ export class FileSystem {
       ? skillsFiles.map(f => `- ${f.file} (${f.content.length} bytes)`).join('\n')
       : "No skills found.\n";
 
-    index += "\n\n[LARGE OUTPUTS (data/large_outputs/)]\n";
-    index += largeOutputs.length > 0
-      ? largeOutputs.map(f => `- ${f.file} (${f.content.length} bytes)`).join('\n')
-      : "No large outputs found.\n";
-
-    // SESSION HISTORY is excluded from the main index to reduce volatility (prefix stability for caching)
     return index;
   }
 
@@ -118,23 +111,23 @@ export class FileSystem {
     if (normalizedPath.startsWith('..') || path.isAbsolute(normalizedPath)) {
       throw new Error('Invalid filename: path traversal or absolute path not allowed');
     }
+
+    // 1. Check Database (Memory)
+    const dbFilename = filename.endsWith('.md') ? filename : `${filename}.md`;
+    const memResult = await db.execute('SELECT content FROM memory WHERE filename = ? OR filename = ?', [filename, dbFilename]);
+    if (memResult.rows.length > 0) {
+      return String(memResult.rows[0].content);
+    }
     
+    // 2. Check Static Files (Vault, Skills)
     const allowedRoots = [
       this.vaultPath,
-      this.memoryPath,
       this.skillsPath,
-      this.largeOutputsPath,
-      this.sessionHistoryPath,
-      path.join(this.bundledDataRoot, 'memory'),
-      path.join(this.bundledDataRoot, 'skills'),
-      path.join(this.bundledDataRoot, 'large_outputs'),
-      path.join(this.bundledDataRoot, 'session_history')
+      path.join(this.bundledDataRoot, 'skills')
     ];
 
     const candidates = [];
-
     candidates.push(path.join(this.bundledDataRoot, filename));
-    candidates.push(path.join(this.writableDataRoot, filename));
 
     for (const root of allowedRoots) {
       candidates.push(path.join(root, filename));
@@ -153,58 +146,6 @@ export class FileSystem {
     }
 
     throw new Error(`File not found: ${filename}`);
-  }
-
-  /**
-   * Split a Markdown file into chunks based on headers
-   */
-  private _chunkFile({ file, content }: FileContent): FileChunk[] {
-    // If file is small, return as single chunk
-    if (content.length < 2000) {
-      return [{ file, content, chunkId: null }];
-    }
-
-    const chunks: FileChunk[] = [];
-    const lines = content.split('\n');
-    let currentChunk: string[] = [];
-    let currentSize = 0;
-    let chunkCount = 0;
-
-    for (const line of lines) {
-      // Split on major headers if chunk is already getting large
-      if (line.startsWith('#') && currentSize > 1000) {
-        chunks.push({
-          file,
-          content: currentChunk.join('\n'),
-          chunkId: ++chunkCount
-        });
-        currentChunk = [];
-        currentSize = 0;
-      }
-      currentChunk.push(line);
-      currentSize += line.length;
-
-      // Hard limit on chunk size
-      if (currentSize > 3000) {
-        chunks.push({
-          file,
-          content: currentChunk.join('\n'),
-          chunkId: ++chunkCount
-        });
-        currentChunk = [];
-        currentSize = 0;
-      }
-    }
-
-    if (currentChunk.length > 0) {
-      chunks.push({
-        file,
-        content: currentChunk.join('\n'),
-        chunkId: ++chunkCount
-      });
-    }
-
-    return chunks;
   }
 
   private async _readDir(dirPath: string, mdOnly = true): Promise<FileContent[]> {
@@ -230,10 +171,9 @@ export class FileSystem {
 
   async writeNote(filename: string, content: string): Promise<string> {
     if (!filename.endsWith('.md')) filename += '.md';
-    const filePath = path.join(this.memoryPath, filename);
-    await fs.ensureDir(this.memoryPath);
 
     let finalContent = content;
+    let alwaysRemember = 0;
 
     if (!content.trim().startsWith('---')) {
       const title = filename.replace('.md', '').replace(/[-_]/g, ' ');
@@ -247,38 +187,47 @@ always_remember: false
 
 `;
       finalContent = frontmatter + content;
+    } else {
+      if (content.includes('always_remember: true')) {
+        alwaysRemember = 1;
+      }
     }
 
-    await fs.writeFile(filePath, finalContent, 'utf-8');
-    return `Note saved to ${filename}`;
+    const now = new Date().toISOString();
+    await db.execute(
+      `INSERT INTO memory (filename, content, always_remember, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?)
+       ON CONFLICT(filename) DO UPDATE SET
+         content = excluded.content,
+         always_remember = excluded.always_remember,
+         updated_at = excluded.updated_at`,
+      [filename, finalContent, alwaysRemember, now, now]
+    );
+
+    return `Note saved to database: ${filename}`;
   }
 
   async saveSession(sessionId: string, messages: any[]): Promise<void> {
-    if (!await fs.pathExists(this.sessionHistoryPath)) await fs.mkdirp(this.sessionHistoryPath);
-    const filePath = path.join(this.sessionHistoryPath, `${sessionId}.json`);
-    await fs.writeJson(filePath, { lastActivityAt: Date.now(), messages }, { spaces: 2 });
+    const now = new Date().toISOString();
+    await db.execute(
+      `INSERT INTO sessions (id, messages, last_activity_at)
+       VALUES (?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET
+         messages = excluded.messages,
+         last_activity_at = excluded.last_activity_at`,
+      [sessionId, JSON.stringify(messages), now]
+    );
   }
 
   async loadSession(sessionId: string): Promise<any[]> {
-    const filePath = path.join(this.sessionHistoryPath, `${sessionId}.json`);
-    if (await fs.pathExists(filePath)) {
-      const data = await fs.readJson(filePath);
-
-      // Support both new format { lastActivityAt, messages } and legacy array format
-      const messages: any[] = Array.isArray(data) ? data : (data.messages ?? []);
-      const lastActivityAt: number = Array.isArray(data)
-        ? (await fs.stat(filePath)).mtimeMs
-        : (data.lastActivityAt ?? Date.now());
-
-      // 10 minutes inactivity rule (600,000 ms)
-      if (Date.now() - lastActivityAt > 10 * 60 * 1000) {
-        const timestamp = new Date(lastActivityAt).toISOString().replace(/[:.]/g, '-');
-        const archivePath = path.join(this.sessionHistoryPath, `${sessionId}_${timestamp}.json`);
-        await fs.rename(filePath, archivePath);
+    const result = await db.execute('SELECT messages FROM sessions WHERE id = ?', [sessionId]);
+    if (result.rows.length > 0) {
+      try {
+        return JSON.parse(String(result.rows[0].messages));
+      } catch (e) {
+        console.error(`Error parsing session ${sessionId}:`, e);
         return [];
       }
-
-      return messages;
     }
     return [];
   }

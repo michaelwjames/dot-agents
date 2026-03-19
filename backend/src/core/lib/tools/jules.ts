@@ -1,15 +1,14 @@
 import { Tool, ToolDefinition, ToolContext } from './base.js';
-import { MakeExecutor } from '../executors/make_executor.js';
 
 const STDOUT_TRUNCATION_LIMIT = 500;
 const DISCORD_CONTENT_LIMIT = 1900; // Leave some buffer under 2000 limit
 
 /**
  * Tool to interact with the Jules AI agent.
+ * @deprecated This tool currently relies on a Node client to be implemented in Spec #11.
+ * For now, it is a stub that will be fully functional after Spec #11.
  */
 export class JulesTool implements Tool {
-  private make: MakeExecutor;
-
   private _toRelativeTime(isoTimestamp: string): string {
     const parsed = Date.parse(isoTimestamp);
     if (Number.isNaN(parsed)) return isoTimestamp;
@@ -32,8 +31,6 @@ export class JulesTool implements Tool {
   }
 
   private _humanizeTimestamps(output: string): string {
-    // Convert bracketed ISO timestamps like:
-    // [2026-03-04T07:47:41.064367Z] AGENT: ...
     return output.replace(/\[([^\]]+)\]/g, (match, ts) => {
       const relative = this._toRelativeTime(ts);
       return relative === ts ? match : `[${relative}]`;
@@ -44,7 +41,7 @@ export class JulesTool implements Tool {
     type: 'function',
     function: {
       name: 'jules',
-      description: 'Interact with the Jules AI agent. Use this tool for ALL Jules operations — never use run_make with jules-* targets directly. Pass sessionId as the session identifier.',
+      description: 'Interact with the Jules AI agent. Use this tool for ALL Jules operations. Pass sessionId as the session identifier.',
       parameters: {
         type: 'object',
         properties: {
@@ -92,95 +89,12 @@ export class JulesTool implements Tool {
     },
   };
 
-  constructor(make: MakeExecutor) {
-    this.make = make;
-  }
-
-  async execute(args: any, context?: ToolContext): Promise<string> {
-    const targetName = `jules-${args.action}`;
-
-    // Pass relevant arguments to the make target
-    const makeArgs: Record<string, string> = {};
-    if (args.sessionId) makeArgs.ID = args.sessionId;
-    if (args.action === 'create' && args.prompt) makeArgs.PROMPT = args.prompt;
-    if ((args.action === 'send-message' || args.action === 'sendMessage') && args.prompt) {
-      makeArgs.MESSAGE = args.prompt;
-    }
-    if (args.repo) makeArgs.REPO = args.repo;
-    if (args.title) makeArgs.TITLE = args.title;
-    if (args.branch) makeArgs.BRANCH = args.branch;
-    
-    // Default pageSize for list actions to prevent massive outputs
-    if ((args.action === 'list-sessions' || args.action === 'list-activities') && !args.pageSize) {
-      args.pageSize = 10;
-    }
-    
-    // Map pageSize to the correct parameter name for each action
-    if (args.pageSize) {
-      if (args.action === 'fetch-latest-sessions' || args.action === 'show-cached-sessions') {
-        makeArgs.LIMIT = String(args.pageSize);
-      } else if (args.action === 'list-sessions' || args.action === 'list-activities' || args.action === 'list-sources') {
-        makeArgs.SIZE = String(args.pageSize);
-      }
-      // For other actions, pageSize is not applicable and will be ignored
-    }
-    
-    // Validate that no conflicting parameters are set
-    if (args.action === 'fetch-latest-sessions' && makeArgs.SIZE) {
-      throw new Error('fetch-latest-sessions uses LIMIT parameter, not SIZE');
-    }
-    if (args.action === 'show-cached-sessions' && makeArgs.SIZE) {
-      throw new Error('show-cached-sessions uses LIMIT parameter, not SIZE');
-    }
-    if ((args.action === 'list-sessions' || args.action === 'list-activities' || args.action === 'list-sources') && makeArgs.LIMIT) {
-      throw new Error(`${args.action} uses SIZE parameter, not LIMIT`);
-    }
-
-    // Special handling for the action name to match Makefile targets
-    let finalTarget = targetName;
-    if (args.action === 'create') finalTarget = 'jules-create-session';
-    if (args.action === 'list-activities') finalTarget = 'jules-list-activities';
-    if (args.action === 'get-session') finalTarget = 'jules-get-session';
-    if (args.action === 'get-session-status') finalTarget = 'jules-get-session-status';
-    if (args.action === 'get-pending-feedback') finalTarget = 'jules-get-pending-feedback';
-    if (args.action === 'list-sessions') finalTarget = 'jules-list-sessions';
-    if (args.action === 'fetch-latest-sessions') finalTarget = 'jules-fetch-latest-sessions';
-    if (args.action === 'show-cached-sessions') finalTarget = 'jules-show-cached-sessions';
-
-    const cmdResult = await this.make.run(finalTarget, makeArgs);
-    const humanizedStdout = this._humanizeTimestamps(cmdResult.stdout);
-
-    // If context is available, send the output directly to the channel
-    // and return minimal acknowledgment to prevent unnecessary LLM responses
-    if (context && humanizedStdout) {
-      // Truncate content for Discord to avoid 2000 character limit
-      let discordContent = humanizedStdout;
-      if (humanizedStdout.length > DISCORD_CONTENT_LIMIT) {
-        discordContent = `${humanizedStdout.substring(0, DISCORD_CONTENT_LIMIT)}...\n\n*(output truncated due to Discord limits - full output available in session history)*`;
-      }
-      await context.send(discordContent);
-      
-      // Return special marker indicating no response needed
-      const output = {
-        stdout: "__NO_RESPONSE_NEEDED__",
-        stderr: cmdResult.stderr,
-        exitCode: cmdResult.exitCode,
-        success: cmdResult.exitCode === 0,
-        _fullStdout: humanizedStdout // Internal use for history persistence
-      };
-      
-      return JSON.stringify(output);
-    }
-
-    // Return structured JSON output with a truncated stdout for the LLM
-    const output = {
-      stdout: humanizedStdout.length > STDOUT_TRUNCATION_LIMIT ? `${humanizedStdout.substring(0, STDOUT_TRUNCATION_LIMIT)}... (full output displayed in channel)` : humanizedStdout,
-      stderr: cmdResult.stderr,
-      exitCode: cmdResult.exitCode,
-      success: cmdResult.exitCode === 0,
-      _fullStdout: humanizedStdout // Internal use for history persistence
-    };
-
-    return JSON.stringify(output);
+  async execute(_args: any, _context?: ToolContext): Promise<string> {
+    return JSON.stringify({
+      success: false,
+      stdout: "Jules tool is temporarily unavailable during foundation refactor. It will be restored in Spec #11.",
+      stderr: "Tool migration in progress.",
+      exitCode: 1
+    });
   }
 }

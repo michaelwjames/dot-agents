@@ -10,6 +10,7 @@ import multer from 'multer';
 import { tmpdir } from 'os';
 
 import { GroqProvider } from './core/lib/core/groq_provider.js';
+import { db } from './core/lib/data/turso_db.js';
 import { FileSystem } from './core/lib/data/file_system.js';
 import { ToolRegistry } from './core/lib/tools.js';
 import { TokenTracker } from './core/lib/analytics/token_tracker.js';
@@ -62,6 +63,9 @@ const bossAgentService = new BossAgentService(
 
 // Setup multer for audio uploads
 const upload = multer({ dest: tmpdir() });
+
+// Initialize database
+db.init().catch(err => console.error('Database initialization failed:', err));
 
 // Load Nomenclature catalog on startup
 nomenclature.loadCatalog().catch((err: any) => console.error('Nomenclature load failed:', err));

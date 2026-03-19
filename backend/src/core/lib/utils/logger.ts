@@ -1,19 +1,15 @@
 /**
- * Logging utility with timestamps and file output for boss-agent
+ * Logging utility with timestamps and database output for boss-agent
  */
 
-import { writeFile, mkdir } from 'fs/promises';
-import { join } from 'path';
+import { db } from '../data/turso_db.js';
 
 export class Logger {
   private static instance: Logger;
   private prefix: string;
-  private logDir: string;
 
   private constructor(prefix: string = '') {
     this.prefix = prefix;
-    const dataRoot = process.env.BOSS_WRITABLE_DATA_DIR || './data';
-    this.logDir = join(dataRoot, 'logs');
   }
 
   static getInstance(prefix: string = ''): Logger {
@@ -32,56 +28,45 @@ export class Logger {
     return `[${hours}:${minutes}:${seconds}.${milliseconds}]`;
   }
 
-  private getDateString(): string {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  }
-
-  private async writeToFile(level: string, ...args: any[]): Promise<void> {
+  private async writeToDB(level: string, ...args: any[]): Promise<void> {
     try {
-      // Ensure logs directory exists
-      await mkdir(this.logDir, { recursive: true });
-      
-      // Create daily log file
-      const logFileName = `console-${this.getDateString()}.log`;
-      const logFilePath = join(this.logDir, logFileName);
-      
       // Format log entry
       const timestamp = this.getTimestamp();
-      const logEntry = `${timestamp} ${this.prefix ? this.prefix + ' ' : ''}${level}: ${args.map(arg => 
+      const message = `${timestamp} ${this.prefix ? this.prefix + ' ' : ''}${args.map(arg =>
         typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
-      ).join(' ')}\n`;
+      ).join(' ')}`;
       
-      // Append to log file
-      await writeFile(logFilePath, logEntry, { flag: 'a' });
+      // Save to Turso logs table
+      await db.execute(
+        `INSERT INTO logs (level, message, created_at)
+         VALUES (?, ?, ?)`,
+        [level || 'INFO', message, new Date().toISOString()]
+      );
     } catch (error) {
       // Silently fail to avoid infinite loops, but log to console
-      console.error('Failed to write to log file:', error);
+      console.error('Failed to write to database log:', error);
     }
   }
 
   log(...args: any[]): void {
-    this.writeToFile('', ...args).catch(() => {});
+    this.writeToDB('INFO', ...args).catch(() => {});
   }
 
   error(...args: any[]): void {
-    this.writeToFile('ERROR', ...args).catch(() => {});
+    this.writeToDB('ERROR', ...args).catch(() => {});
   }
 
   warn(...args: any[]): void {
-    this.writeToFile('WARN', ...args).catch(() => {});
+    this.writeToDB('WARN', ...args).catch(() => {});
   }
 
   info(...args: any[]): void {
-    this.writeToFile('INFO', ...args).catch(() => {});
+    this.writeToDB('INFO', ...args).catch(() => {});
   }
 
   debug(...args: any[]): void {
     if (process.env.DEBUG === 'true') {
-      this.writeToFile('DEBUG', ...args).catch(() => {});
+      this.writeToDB('DEBUG', ...args).catch(() => {});
     }
   }
 }
