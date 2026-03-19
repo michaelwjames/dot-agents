@@ -1,0 +1,2 @@
+# Typist Journal
+

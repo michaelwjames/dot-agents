@@ -628,7 +628,7 @@ The `run_make` tool and MakeExecutor fallback are removed in spec #0.
 **Step 2 — Update system prompt file index:**
 1. The system prompt in `boss_agent_service.ts` injects a file system index listing `data/skills/` files.
 2. Archive all skill markdown files that are now covered by native tools (move to `data/skills/_archive/`):
-   - `jules-agent/` → archived (replaced by spec #11)
+   - ✅ `jules-agent/` → moved to `_deprecated/` (replaced by spec #11)
    - Any other skill files whose functionality is now a registered tool.
 3. Keep `create-boss-skills/` skill as-is (meta skill, not a tool).
 4. Do NOT delete — archive only.
@@ -637,12 +637,14 @@ The `run_make` tool and MakeExecutor fallback are removed in spec #0.
 - If the system prompt instructs the agent to use specific make targets or skill scripts, update those instructions to reference the equivalent tool names instead.
 
 **Skills NOT to convert (keep as-is):**
-- `data/skills/jules-agent/` — being replaced by Node Jules Tool (spec #11).
+- ✅ `data/skills/jules-agent/` — moved to `_deprecated/` (replaced by spec #11)
 - `data/skills/create-boss-skills/` — meta-skill for creating new skills; keep for reference.
 
 ---
 
 ## 11. Convert Jules Tool: Python → Node/TypeScript
+
+**✅ COMPLETED** - Implemented in commit 62e8fc4884108230921e74902637fe0d4e7b458a
 
 **Complexity:** High
 **Files:** `backend/src/core/lib/tools/jules.ts`, `backend/src/core/lib/executors/make_executor.ts`
@@ -891,8 +893,8 @@ ANTHROPIC_API_KEY=
 ```
 Spec #0  →  Spec #9  →  Spec #6 (sessions endpoint uses Turso)
 Spec #0  →  Spec #10 (MakeExecutor already gone)
-Spec #0  →  Spec #11 (Jules Node client, removes last Python/make dependency)
-Spec #11 →  Spec #5  (slash commands work fully once tools are native)
+✅ Spec #0  →  ✅ Spec #11 (Jules Node client, removes last Python/make dependency)
+✅ Spec #11 →  Spec #5  (slash commands work fully once tools are native)
 Spec #0  →  Spec #12 (GitHub tool replaces pr-* make targets)
 Specs #1, #2, #3, #4 are independent — no dependencies, do in any order
 Spec #7 (security review) — do last, after architecture settles
