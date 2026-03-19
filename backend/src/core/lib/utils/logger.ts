@@ -12,7 +12,8 @@ export class Logger {
 
   private constructor(prefix: string = '') {
     this.prefix = prefix;
-    this.logDir = './data/logs';
+    const dataRoot = process.env.BOSS_WRITABLE_DATA_DIR || './data';
+    this.logDir = join(dataRoot, 'logs');
   }
 
   static getInstance(prefix: string = ''): Logger {

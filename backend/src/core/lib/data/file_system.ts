@@ -20,6 +20,8 @@ export type FileChunk = FileContent;
 
 export class FileSystem {
   private projectRoot: string;
+  private bundledDataRoot: string;
+  private writableDataRoot: string;
   private vaultPath: string;
   private memoryPath: string;
   private skillsPath: string;
@@ -50,12 +52,15 @@ export class FileSystem {
       this.projectRoot = '/app';
     }
 
-    this.vaultPath = vaultPath || path.join(this.projectRoot, 'data', 'vault');
-    this.memoryPath = memoryPath || path.join(this.projectRoot, 'data', 'memory');
-    this.skillsPath = skillsPath || path.join(this.projectRoot, 'data', 'skills');
-    this.largeOutputsPath = path.join(this.projectRoot, 'data', 'large_outputs');
-    this.sessionHistoryPath = path.join(this.projectRoot, 'data', 'session_history');
-    this.soulPath = path.join(this.projectRoot, 'data', 'soul.md');
+    this.bundledDataRoot = path.join(this.projectRoot, 'data');
+    this.writableDataRoot = process.env.BOSS_WRITABLE_DATA_DIR || this.bundledDataRoot;
+
+    this.vaultPath = vaultPath || path.join(this.bundledDataRoot, 'vault');
+    this.memoryPath = memoryPath || path.join(this.writableDataRoot, 'memory');
+    this.skillsPath = skillsPath || path.join(this.bundledDataRoot, 'skills');
+    this.largeOutputsPath = path.join(this.writableDataRoot, 'large_outputs');
+    this.sessionHistoryPath = path.join(this.writableDataRoot, 'session_history');
+    this.soulPath = path.join(this.bundledDataRoot, 'soul.md');
   }
 
   async loadSoulPrompt(): Promise<string> {
@@ -119,13 +124,17 @@ export class FileSystem {
       this.memoryPath,
       this.skillsPath,
       this.largeOutputsPath,
-      this.sessionHistoryPath
+      this.sessionHistoryPath,
+      path.join(this.bundledDataRoot, 'memory'),
+      path.join(this.bundledDataRoot, 'skills'),
+      path.join(this.bundledDataRoot, 'large_outputs'),
+      path.join(this.bundledDataRoot, 'session_history')
     ];
 
     const candidates = [];
 
-    const dataRoot = path.join(this.projectRoot, 'data');
-    candidates.push(path.join(dataRoot, filename));
+    candidates.push(path.join(this.bundledDataRoot, filename));
+    candidates.push(path.join(this.writableDataRoot, filename));
 
     for (const root of allowedRoots) {
       candidates.push(path.join(root, filename));
