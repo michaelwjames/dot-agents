@@ -99,6 +99,49 @@ app.get('/api/history/:sessionId', authenticateJWT, async (req, res) => {
   }
 });
 
+app.get('/api/logs', authenticateJWT, async (req, res) => {
+  const lines = parseInt(req.query.lines as string) || 100;
+  const maxLines = Math.min(lines, 500);
+
+  const logDir = path.join(process.env.BOSS_WRITABLE_DATA_DIR || './data', 'logs');
+
+  const getLogDate = (date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+
+  const todayFile = path.join(logDir, `console-${getLogDate(today)}.log`);
+  const yesterdayFile = path.join(logDir, `console-${getLogDate(yesterday)}.log`);
+
+  try {
+    let logContent = '';
+    if (fs.existsSync(todayFile)) {
+      logContent = fs.readFileSync(todayFile, 'utf8');
+    }
+
+    // If today's log is empty or missing, try yesterday's
+    if (!logContent.trim() && fs.existsSync(yesterdayFile)) {
+      logContent = fs.readFileSync(yesterdayFile, 'utf8');
+    }
+
+    if (!logContent.trim()) {
+      return res.json({ logs: [] });
+    }
+
+    const allLines = logContent.split('\n').filter(line => line.trim());
+    const result = allLines.slice(-maxLines);
+    res.json({ logs: result });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.post('/api/transcribe', authenticateJWT, upload.single('audio'), async (req, res) => {
   if (!req.file) {
     return res.status(400).json({ error: 'No audio file uploaded' });
