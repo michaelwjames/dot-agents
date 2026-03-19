@@ -28,8 +28,23 @@ export class FileSystem {
   private soulPath: string;
 
   constructor(vaultPath?: string, memoryPath?: string, skillsPath?: string) {
-    const possibleRoot = path.resolve(__dirname, '..', '..', '..');
-    this.projectRoot = (possibleRoot === '/' || possibleRoot.includes('tests')) ? process.cwd() : possibleRoot;
+    const candidateRoots = [
+      process.cwd(),
+      path.resolve(__dirname, '..', '..', '..', '..', '..', '..'),
+      path.resolve(__dirname, '..', '..', '..', '..', '..'),
+      path.resolve(__dirname, '..', '..', '..', '..'),
+      path.resolve(__dirname, '..', '..', '..')
+    ];
+
+    const resolvedRoot = candidateRoots.find(root => {
+      if (!root || root === '/' || root.includes('tests')) {
+        return false;
+      }
+
+      return fs.existsSync(path.join(root, 'data'));
+    });
+
+    this.projectRoot = resolvedRoot || process.cwd();
 
     if (!this.projectRoot || this.projectRoot === '/') {
       this.projectRoot = '/app';
