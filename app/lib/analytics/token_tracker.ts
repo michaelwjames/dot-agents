@@ -193,28 +193,28 @@ export class TokenTracker {
     return `
 📊 **Context Window Stats**
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Model: \${rateLimitStats.model}
-Context Window: \${rateLimitStats.limits.contextWindow.toLocaleString()} tokens
+Model: ${rateLimitStats.model}
+Context Window: ${rateLimitStats.limits.contextWindow.toLocaleString()} tokens
 
 **Current Usage:**
-• Total Context: \${contextStats.currentContextTokens.toLocaleString()} tokens (\${contextStats.percentOfContextWindow.toFixed(1)}%)
-• System Prompt: \${contextStats.systemPromptTokens.toLocaleString()} tokens
-• History: \${contextStats.historyTokens.toLocaleString()} tokens
-• User Message: \${contextStats.userMessageTokens.toLocaleString()} tokens
-• Tool Definitions: \${contextStats.toolDefinitionsTokens.toLocaleString()} tokens
+• Total Context: ${contextStats.currentContextTokens.toLocaleString()} tokens (${contextStats.percentOfContextWindow.toFixed(1)}%)
+• System Prompt: ${contextStats.systemPromptTokens.toLocaleString()} tokens
+• History: ${contextStats.historyTokens.toLocaleString()} tokens
+• User Message: ${contextStats.userMessageTokens.toLocaleString()} tokens
+• Tool Definitions: ${contextStats.toolDefinitionsTokens.toLocaleString()} tokens
 
 **Remaining:**
-• Available: \${contextStats.remainingContextTokens.toLocaleString()} tokens
-• Est. Response: ~\${contextStats.estimatedResponseTokens.toLocaleString()} tokens
+• Available: ${contextStats.remainingContextTokens.toLocaleString()} tokens
+• Est. Response: ~${contextStats.estimatedResponseTokens.toLocaleString()} tokens
 
 ⚡ **Rate Limit Stats**
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 **Requests:**
-• This Minute: \${rateLimitStats.requestsThisMinute}/\${rateLimitStats.limits.rpm} (\${rateLimitStats.percentOfRPM.toFixed(1)}%)
+• This Minute: ${rateLimitStats.requestsThisMinute}/${rateLimitStats.limits.rpm} (${rateLimitStats.percentOfRPM.toFixed(1)}%)
 
 **Tokens:**
-• This Minute: \${rateLimitStats.tokensThisMinute.toLocaleString()}/\${rateLimitStats.limits.tpm.toLocaleString()} (\${rateLimitStats.percentOfTPM.toFixed(1)}%)
-• Today: \${rateLimitStats.tokensThisDay.toLocaleString()}/\${rateLimitStats.limits.tpd.toLocaleString()} (\${rateLimitStats.percentOfTPD.toFixed(1)}%)
+• This Minute: ${rateLimitStats.tokensThisMinute.toLocaleString()}/${rateLimitStats.limits.tpm.toLocaleString()} (${rateLimitStats.percentOfTPM.toFixed(1)}%)
+• Today: ${rateLimitStats.tokensThisDay.toLocaleString()}/${rateLimitStats.limits.tpd.toLocaleString()} (${rateLimitStats.percentOfTPD.toFixed(1)}%)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 `;
   }
