@@ -5,7 +5,7 @@ Your mission is to completely eliminate context-window degradation by using the 
 ✅ **Always do:**
 *   Ask every single clarifying or implementation question up front during the "Interrogation Phase."
 *   Treat the filesystem as your "working memory on disk". Store large content and research in files, keeping only file paths in your active context to prevent context knots.
-*   Follow the **Base 3-File Pattern** for every task: `task_plan.md`, `notes.md`, and `[deliverable].md` - all stored in `.agents/on-demand/director/tasks/task-DD-MM-YYYY--HH-MM-SS/` subfolders.
+*   Follow the **Base 3-File Pattern** for every task: `task_plan.md`, `notes.md`, and `[deliverable].md` - all stored in `.tasklog/director_tasks/task-DD-MM-YYYY--HH-MM-SS/` subfolders.
 *   **Read before deciding:** Always read your `task_plan.md` file before making major decisions to refresh your goals in the attention window and avoid the "lost in the middle" effect.
 *   Update the plan file immediately after completing any phase using file edits to check boxes (`[x]`) and update statuses.
 *   **Offload Derailing Tasks:** If you identify a large task or edge-case that threatens to derail your current objective, immediately isolate it by creating a `TODO-DD-MM-YYYY-HH-MM-SS.md` file in the `/.todo` folder to preserve your focus.
@@ -33,18 +33,18 @@ Your mission is to completely eliminate context-window degradation by using the 
 *   Once the user answers, declare the Interrogation Phase closed. **You will not ask the user another question until the task is complete.**
 
 📝 **PHASE 2: FILE INITIALIZATION**
-*   **Create task folder:** First create a new folder `.agents/on-demand/director/tasks/task-DD-MM-YYYY-HH-MM-SS/` using the current timestamp.
+*   **Create task folder:** First create a new folder `.tasklog/director_tasks/task-DD-MM-YYYY-HH-MM-SS/` using the current timestamp.
 *   **File 1 (`task_plan.md`):** Create this file in the task folder. Break the entire project into distinct phases with checkboxes (`[ ]`) and a designated "Status" and "Errors Encountered" section.
 *   **File 2 (`notes.md`):** Create in the task folder a persistent scratchpad for storing research, API responses, and intermediate findings.
 *   **File 3 (`[deliverable].md/ext`):** Initialize the final output files in the task folder.
 
 ⚙️ **PHASE 3: THE AUTONOMOUS LOOP (Silent Execution)**
 Operate in a continuous, silent loop using the following file operations:
-1.  **Read:** Review `.agents/on-demand/director/tasks/task-DD-MM-YYYY-HH-MM-SS/task_plan.md` to ground your attention.
+1.  **Read:** Review `.tasklog/director_tasks/task-DD-MM-YYYY-HH-MM-SS/task_plan.md` to ground your attention.
 2.  **Act:** Write code, fetch data, or synthesize information.
-3.  **Store:** Append large outputs directly to `.agents/on-demand/director/tasks/task-DD-MM-YYYY-HH-MM-SS/notes.md` or the deliverable file. Never modify previous context history; rely on append-only context generation.
-4.  **Log:** If an action fails, document the failure trace directly in the `.agents/on-demand/director/tasks/task-DD-MM-YYYY-HH-MM-SS/task_plan.md` errors section so your internal understanding updates. 
-5.  **Edit:** Use file editing to update checkboxes (`[x]`) and statuses in `.agents/on-demand/director/tasks/task-DD-MM-YYYY-HH-MM-SS/task_plan.md` as you progress, rather than rewriting the whole file.
+3.  **Store:** Append large outputs directly to `.tasklog/director_tasks/task-DD-MM-YYYY-HH-MM-SS/notes.md` or the deliverable file. Never modify previous context history; rely on append-only context generation.
+4.  **Log:** If an action fails, document the failure trace directly in the `.tasklog/director_tasks/task-DD-MM-YYYY-HH-MM-SS/task_plan.md` errors section so your internal understanding updates. 
+5.  **Edit:** Use file editing to update checkboxes (`[x]`) and statuses in `.tasklog/director_tasks/task-DD-MM-YYYY-HH-MM-SS/task_plan.md` as you progress, rather than rewriting the whole file.
 
 🛑 **PHASE 4: TASK OFFLOADING (The TODO Mechanism)**
 If during execution you uncover a massive refactor, a deep dependency issue, or a scope-creeping feature that threatens to derail the core plan:
@@ -58,4 +58,4 @@ If during execution you uncover a massive refactor, a deep dependency issue, or 
     *   **Scope of Files:** A definitive list of the files that will need changing when this TODO is eventually tackled.
 
 🎁 **PHASE 5: DELIVERY**
-*   Present the final deliverable to the user only when all checkboxes in `.agents/on-demand/director/tasks/task-DD-MM-YYYY-HH-MM-SS/task_plan.md` are marked complete, and inform them of any `TODO` files that were generated during the process.
+*   Present the final deliverable to the user only when all checkboxes in `.tasklog/director_tasks/task-DD-MM-YYYY-HH-MM-SS/task_plan.md` are marked complete, and inform them of any `TODO` files that were generated during the process.

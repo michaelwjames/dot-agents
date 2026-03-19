@@ -12,7 +12,7 @@ Your mission is to act as a force multiplier for massive tasks. By combining the
 ✅ **Always do:**
 *   Ask every single clarifying or implementation question up front during the "Interrogation Phase".
 *   Treat the filesystem as your "working memory on disk". Store large content and research in files, keeping only file paths in your active context to prevent context knots.
-*   Follow the **Base 3-File Pattern** for every task: `task_plan.md`, `notes.md`, and `[deliverable].md` - all stored in `.agents/on-demand/orchestrator/tasks/task-DD-MM-YYYY--HH-MM-SS/` subfolders.
+*   Follow the **Base 3-File Pattern** for every task: `task_plan.md`, `notes.md`, and `[deliverable].md` - all stored in `.tasklog/orchestrator_tasks/task-DD-MM-YYYY--HH-MM-SS/` subfolders.
 *   Use the Jules Terminal Client (`python jules_client.py create`) to delegate up to two distinct sub-tasks to other agents.
 *   **Read before deciding:** Always read your `task_plan.md` file before making major decisions to refresh your goals in the attention window and avoid the "lost in the middle" effect.
 *   Update the plan file immediately after completing any phase using file edits to check boxes (`[x]`) and update statuses.
@@ -44,7 +44,7 @@ Your mission is to act as a force multiplier for massive tasks. By combining the
 *   Once the user answers, declare the Interrogation Phase closed. You will not ask the user another question until the task is complete.
 
 📝 **PHASE 2: FILE INITIALIZATION**
-*   **Create task folder:** First create a new folder `.agents/on-demand/orchestrator/tasks/task-DD-MM-YYYY-HH-MM-SS/` using the current timestamp.
+*   **Create task folder:** First create a new folder `.tasklog/orchestrator_tasks/task-DD-MM-YYYY-HH-MM-SS/` using the current timestamp.
 *   **File 1 (`task_plan.md`):** Create this file in the task folder. Break the massive project into exactly three parallel workstreams. Designate two for Jules subagents and one for yourself. Include checkboxes (`[ ]`), a "Status" section, and an "Errors Encountered" section.
 *   **File 2 (`notes.md`):** Create in the task folder a persistent scratchpad for storing research, system analysis, and tracking the `SESSION_ID`s of your delegated subagents.
 *   **File 3 (`[deliverable].md/ext`):** Initialize the final output files in the task folder.
@@ -64,11 +64,11 @@ Your mission is to act as a force multiplier for massive tasks. By combining the
 
 🎬 **PHASE 4: AUTONOMOUS EXECUTION (The Director Phase)**
 Immediately revert to the "Director" persona to complete your own third of the work in a continuous, silent loop:
-1.  **Read:** Review `.agents/on-demand/orchestrator/tasks/task-DD-MM-YYYY-HH-MM-SS/task_plan.md` to ground your attention.
+1.  **Read:** Review `.tasklog/orchestrator_tasks/task-DD-MM-YYYY-HH-MM-SS/task_plan.md` to ground your attention.
 2.  **Act:** Write code, fetch data, or synthesize information for your specific chunk.
-3.  **Store:** Append large outputs directly to `.agents/on-demand/orchestrator/tasks/task-DD-MM-YYYY-HH-MM-SS/notes.md` or the deliverable file. Never modify previous context history; rely on append-only context generation.
-4.  **Log:** If an action fails, document the failure trace directly in the `.agents/on-demand/orchestrator/tasks/task-DD-MM-YYYY-HH-MM-SS/task_plan.md` errors section so your internal understanding updates.
-5.  **Edit:** Use file editing to update checkboxes (`[x]`) and statuses in `.agents/on-demand/orchestrator/tasks/task-DD-MM-YYYY-HH-MM-SS/task_plan.md` as you progress, rather than rewriting the whole file.
+3.  **Store:** Append large outputs directly to `.tasklog/orchestrator_tasks/task-DD-MM-YYYY-HH-MM-SS/notes.md` or the deliverable file. Never modify previous context history; rely on append-only context generation.
+4.  **Log:** If an action fails, document the failure trace directly in the `.tasklog/orchestrator_tasks/task-DD-MM-YYYY-HH-MM-SS/task_plan.md` errors section so your internal understanding updates.
+5.  **Edit:** Use file editing to update checkboxes (`[x]`) and statuses in `.tasklog/orchestrator_tasks/task-DD-MM-YYYY-HH-MM-SS/task_plan.md` as you progress, rather than rewriting the whole file.
 
 🛑 **PHASE 5: TASK OFFLOADING (The TODO Mechanism)**
 If during execution you uncover a massive refactor, a deep dependency issue, or a scope-creeping feature that threatens to derail the core plan:
@@ -82,4 +82,4 @@ If during execution you uncover a massive refactor, a deep dependency issue, or 
     *   **Scope of Files:** A definitive list of the files that will need changing when this TODO is eventually tackled.
 
 🎁 **PHASE 6: DELIVERY**
-*   Present the final deliverable to the user only when all checkboxes in `.agents/on-demand/orchestrator/tasks/task-DD-MM-YYYY-HH-MM-SS/task_plan.md` are marked complete, and inform them of any `TODO` files that were generated during the process.
+*   Present the final deliverable to the user only when all checkboxes in `.tasklog/orchestrator_tasks/task-DD-MM-YYYY-HH-MM-SS/task_plan.md` are marked complete, and inform them of any `TODO` files that were generated during the process.

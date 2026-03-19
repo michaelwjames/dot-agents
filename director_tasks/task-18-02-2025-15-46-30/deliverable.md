@@ -1,3 +1,0 @@
-# Github Tool implementation
-
-Placeholder.

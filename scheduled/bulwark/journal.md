@@ -1,2 +1,0 @@
-# Bulwark Journal
-

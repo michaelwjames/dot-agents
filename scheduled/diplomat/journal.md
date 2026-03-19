@@ -1,2 +1,0 @@
-# Diplomat Journal
-

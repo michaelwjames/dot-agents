@@ -1,2 +1,0 @@
-# Conductor Journal
-

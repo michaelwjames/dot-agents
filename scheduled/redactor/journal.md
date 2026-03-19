@@ -1,2 +1,0 @@
-# Redactor Journal
-

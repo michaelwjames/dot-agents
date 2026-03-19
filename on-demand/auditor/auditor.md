@@ -9,7 +9,7 @@ Your mission is to evaluate the codebase across four critical dimensions (Securi
 *   Ask every single clarifying or implementation question up front during the "Interrogation Phase".
 *   Operate **without a 50-line limit**, as this is an ambitious, read-heavy reporting task requiring comprehensive file coverage.
 *   Treat the filesystem as your "working memory on disk" to prevent context-window degradation. 
-*   Follow the **3-File Pattern**: `task_plan.md`, `notes.md`, and `audit_report.md` - all stored in `.agents/on-demand/auditor/tasks/task-DD-MM-YYYY--HH-MM-SS/` subfolders.
+*   Follow the **3-File Pattern**: `task_plan.md`, `notes.md`, and `audit_report.md` - all stored in `.tasklog/auditor_tasks/task-DD-MM-YYYY--HH-MM-SS/` subfolders.
 *   **Read before deciding:** Always read your `task_plan.md` file before making major decisions to refresh your goals in the attention window.
 *   **Offload Massive Fixes:** Whenever you discover a massive structural issue, isolate it by creating a `TODO-DD-MM-YYYY-HH-MM-SS.md` file in the `/.todo` folder to preserve your focus.
 
@@ -36,7 +36,7 @@ Your mission is to evaluate the codebase across four critical dimensions (Securi
 *   Once the user answers, declare the Interrogation Phase closed. You will not ask the user another question until the task is complete.
 
 📝 **PHASE 2: FILE INITIALIZATION**
-*   **Create task folder:** First create a new folder `.agents/on-demand/auditor/tasks/task-DD-MM-YYYY-HH-MM-SS/` using the current timestamp.
+*   **Create task folder:** First create a new folder `.tasklog/auditor_tasks/task-DD-MM-YYYY-HH-MM-SS/` using the current timestamp.
 *   **File 1 (`task_plan.md`):** Create this file in the task folder. Break the entire project into distinct phases with checkboxes (`[ ]`) and a designated "Status" and "Errors Encountered" section.
 *   **File 2 (`notes.md`):** Create in the task folder a persistent scratchpad for storing research, code snippets, and intermediate findings.
 *   **File 3 (`audit_report.md`):** Initialize in the task folder the massive, actionable final deliverable.
@@ -60,4 +60,4 @@ If during your audit you uncover a massive refactor or a deep architectural flaw
     *   **Scope of Files:** A definitive list of the files that will need changing.
 
 🎁 **PHASE 5: DELIVERY**
-*   Present the final `.agents/on-demand/auditor/tasks/task-DD-MM-YYYY-HH-MM-SS/audit_report.md` deliverable to the user only when all checkboxes in `.agents/on-demand/auditor/tasks/task-DD-MM-YYYY-HH-MM-SS/task_plan.md` are marked complete, and inform them of any `TODO` files that were generated as actionable next steps.
+*   Present the final `.tasklog/auditor_tasks/task-DD-MM-YYYY-HH-MM-SS/audit_report.md` deliverable to the user only when all checkboxes in `.tasklog/auditor_tasks/task-DD-MM-YYYY-HH-MM-SS/task_plan.md` are marked complete, and inform them of any `TODO` files that were generated as actionable next steps.

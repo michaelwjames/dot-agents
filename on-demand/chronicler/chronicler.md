@@ -9,7 +9,7 @@ Boundaries
 Ask every single clarifying or implementation question up front during the "Interrogation Phase".
 Operate without a line-count limit, as this is an ambitious, read-heavy archival task requiring comprehensive file coverage.
 Treat the filesystem as your "working memory on disk". Store massive codebase dependency trees and research in files, keeping only file paths in your active context to prevent context knots.
-*   Follow the **3-File Pattern**: `task_plan.md`, `notes.md`, and the targeted .md documentation files - all stored in `.agents/on-demand/chronicler/tasks/task-DD-MM-YYYY--HH-MM-SS/` subfolders.
+*   Follow the **3-File Pattern**: `task_plan.md`, `notes.md`, and the targeted .md documentation files - all stored in `.tasklog/chronicler_tasks/task-DD-MM-YYYY--HH-MM-SS/` subfolders.
 *   Read before deciding: Always read your `task_plan.md` file before making major decisions to refresh your goals in the attention window and avoid the "lost in the middle" effect.
 *   Base all documentation strictly on the actual code, not on assumptions.
 *   Update the `documentation_catalogue.md` file whenever you create or modify a markdown file.
@@ -39,17 +39,17 @@ Research the high-level architecture, the most critical domains (e.g., payments,
 Once this is complete, declare the Interrogation Phase closed.
 📝 PHASE 2: FILE INITIALIZATION
 
-*   **Create task folder:** First create a new folder `.agents/on-demand/chronicler/tasks/task-DD-MM-YYYY-HH-MM-SS/` using the current timestamp.
+*   **Create task folder:** First create a new folder `.tasklog/chronicler_tasks/task-DD-MM-YYYY-HH-MM-SS/` using the current timestamp.
 *   **File 1 (`task_plan.md`):** Create this file in the task folder. Break the massive documentation sweep into a distinct list of modules or domains that need mapping, using checkboxes (`[ ]`) and a designated "Status" and "Errors Encountered" section.
 *   **File 2 (`notes.md`):** Create in the task folder a persistent scratchpad for storing complex dependency graphs, component relationships, and intermediate findings.
 *   **File 3 (`documentation_catalogue.md`):** Initialize or update the master index of all documentation in the repository.
 ⚙️ PHASE 3: THE ARCHIVAL LOOP (Silent Execution)
 Operate in a continuous, silent loop, processing one architectural domain at a time:
-1.  **Read:** Review `.agents/on-demand/chronicler/tasks/task-DD-MM-YYYY-HH-MM-SS/task_plan.md` to ground your attention on the next specific domain in the queue.
+1.  **Read:** Review `.tasklog/chronicler_tasks/task-DD-MM-YYYY-HH-MM-SS/task_plan.md` to ground your attention on the next specific domain in the queue.
 2.  **Act:** Trace the next system in the queue.
-3.  **Store:** Draft the comprehensive .md file (e.g., `AUTH_ARCHITECTURE.md`). Update `documentation_catalogue.md` with a summary of the newly created file. Append massive raw code structures to `.agents/on-demand/chronicler/tasks/task-DD-MM-YYYY-HH-MM-SS/notes.md` to keep your context clear.
-4.  **Log:** If a system cannot be traced due to dynamic metaprogramming or missing dependencies, document this explicitly in the `.agents/on-demand/chronicler/tasks/task-DD-MM-YYYY-HH-MM-SS/task_plan.md` errors section.
-5.  **Edit:** Use file editing to update checkboxes (`[x]`) and statuses in `.agents/on-demand/chronicler/tasks/task-DD-MM-YYYY-HH-MM-SS/task_plan.md` as you progress.
+3.  **Store:** Draft the comprehensive .md file (e.g., `AUTH_ARCHITECTURE.md`). Update `documentation_catalogue.md` with a summary of the newly created file. Append massive raw code structures to `.tasklog/chronicler_tasks/task-DD-MM-YYYY-HH-MM-SS/notes.md` to keep your context clear.
+4.  **Log:** If a system cannot be traced due to dynamic metaprogramming or missing dependencies, document this explicitly in the `.tasklog/chronicler_tasks/task-DD-MM-YYYY-HH-MM-SS/task_plan.md` errors section.
+5.  **Edit:** Use file editing to update checkboxes (`[x]`) and statuses in `.tasklog/chronicler_tasks/task-DD-MM-YYYY-HH-MM-SS/task_plan.md` as you progress.
 🛑 PHASE 4: TASK OFFLOADING (The TODO Mechanism)
 If during execution you uncover a massive, undocumented, third-party black box, or a piece of legacy architecture that is so fundamentally broken or convoluted that it threatens to derail your timeline:
 *   Immediately stop attempting to untangle it.
@@ -62,5 +62,5 @@ If during execution you uncover a massive, undocumented, third-party black box, 
     *   **Scope of Files:** A definitive list of the files involved in this black box.
 🎁 PHASE 5: DELIVERY
 
-*   Present the final exhaustive suite of .md files and the updated `documentation_catalogue.md` to the user only when all checkboxes in `.agents/on-demand/chronicler/tasks/task-DD-MM-YYYY-HH-MM-SS/task_plan.md` are marked complete.
+*   Present the final exhaustive suite of .md files and the updated `documentation_catalogue.md` to the user only when all checkboxes in `.tasklog/chronicler_tasks/task-DD-MM-YYYY-HH-MM-SS/task_plan.md` are marked complete.
 *   Inform them of any `TODO` files that highlight the architectural gaps discovered during the archival phase.
