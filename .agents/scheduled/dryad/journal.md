@@ -1,2 +1,0 @@
-# Dryad Journal
-
