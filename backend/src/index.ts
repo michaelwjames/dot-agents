@@ -173,7 +173,7 @@ app.get('/api/health', (req, res) => {
 const frontendDistPath = path.join(__dirname, '../../frontend/dist');
 if (fs.existsSync(frontendDistPath)) {
   app.use(express.static(frontendDistPath));
-  app.get('/*', (req, res) => {
+  app.get(/^(?!\/api).*/, (req, res) => {
     if (!req.path.startsWith('/api')) {
       res.sendFile(path.join(frontendDistPath, 'index.html'));
     }
