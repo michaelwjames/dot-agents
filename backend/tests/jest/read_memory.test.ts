@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
-import { ReadMemoryTool } from '../../app/lib/tools/read_memory.js';
+import { ReadMemoryTool } from '../../src/core/lib/tools/read_memory.js';
 
 describe('ReadMemoryTool', () => {
   let tool: ReadMemoryTool;

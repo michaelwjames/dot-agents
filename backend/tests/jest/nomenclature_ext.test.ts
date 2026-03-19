@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
-import { Nomenclature } from '../../app/lib/utils/nomenclature.js';
+import { Nomenclature } from '../../src/core/lib/utils/nomenclature.js';
 
 describe('Nomenclature', () => {
   let nomenclature: Nomenclature;

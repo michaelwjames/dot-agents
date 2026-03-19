@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
-import { DisplayLargeOutputTool } from '../../app/lib/tools/display_large_output.js';
+import { DisplayLargeOutputTool } from '../../src/core/lib/tools/display_large_output.js';
 import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';

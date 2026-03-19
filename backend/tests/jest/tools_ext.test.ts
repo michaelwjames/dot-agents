@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
-import { ToolRegistry } from '../../app/lib/tools.js';
-import { FileSystem } from '../../app/lib/data/file_system.js';
-import { Nomenclature } from '../../app/lib/utils/nomenclature.js';
-import { TokenTracker } from '../../app/lib/analytics/token_tracker.js';
+import { ToolRegistry } from '../../src/core/lib/tools.js';
+import { FileSystem } from '../../src/core/lib/data/file_system.js';
+import { Nomenclature } from '../../src/core/lib/utils/nomenclature.js';
+import { TokenTracker } from '../../src/core/lib/analytics/token_tracker.js';
 
 describe('ToolRegistry', () => {
   let fs: FileSystem;

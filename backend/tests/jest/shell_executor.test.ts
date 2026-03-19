@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
-import { ShellExecutor } from '../../app/lib/executors/shell_executor.js';
+import { ShellExecutor } from '../../src/core/lib/executors/shell_executor.js';
 
 describe('ShellExecutor', () => {
   let executor: ShellExecutor;

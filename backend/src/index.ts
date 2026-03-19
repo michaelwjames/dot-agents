@@ -184,7 +184,7 @@ app.post('/api/message', authenticateJWT, async (req, res) => {
   };
 
   try {
-    await bossAgentService.processMessage(normalized);
+    const tokenStats = await bossAgentService.processMessage(normalized);
     // After processing, reload the history to get the full state including agent's main response
     const history = await fileSystem.loadSession(sessionId);
     const lastMessage = history[history.length - 1];
@@ -192,7 +192,8 @@ app.post('/api/message', authenticateJWT, async (req, res) => {
     // Combine intermediate messages with the last message if they are different
     const result = {
       ...lastMessage,
-      intermediateMessages
+      intermediateMessages,
+      tokenStats
     };
 
     res.json(result);

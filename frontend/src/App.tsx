@@ -1,11 +1,27 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
+import { Send, Mic, LogOut, Copy, Check, BarChart2 } from 'lucide-react';
+
+interface TokenStats {
+  inputTokens?: number;
+  outputTokens?: number;
+  model: string;
+  systemPromptTokens?: number;
+  historyTokens?: number;
+  userMessageTokens?: number;
+  toolDefinitionTokens?: number;
+  percentOfContextWindow?: number;
+  tpmUsed?: number;
+  tpdUsed?: number;
+  error?: string;
+}
 import { Send, Mic, LogOut, Menu, X, Copy, Check } from 'lucide-react';
 
 interface Message {
   role: 'user' | 'assistant' | 'system' | 'tool';
   content?: string;
   name?: string;
+  tokenStats?: TokenStats;
 }
 
 const App: React.FC = () => {
@@ -129,7 +145,12 @@ const App: React.FC = () => {
       if (intermediateMessages && intermediateMessages.length > 0) {
         setMessages(prev => [
           ...prev,
-          ...intermediateMessages.map((text: string) => ({ role: 'assistant' as const, content: text })),
+          ...intermediateMessages.map((text: string, idx: number) => ({
+            role: 'assistant' as const,
+            content: text,
+            // Only attach tokenStats to the very last message in the sequence
+            tokenStats: idx === intermediateMessages.length - 1 && !lastMessage.content ? lastMessage.tokenStats : undefined
+          })),
           lastMessage
         ]);
       } else {
@@ -228,6 +249,83 @@ const App: React.FC = () => {
     );
   }
 
+  const CopyButton: React.FC<{ content: string }> = ({ content }) => {
+    const [copied, setCopied] = useState(false);
+
+    const handleCopy = async () => {
+      try {
+        await navigator.clipboard.writeText(content || '');
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      } catch (err) {
+        console.error('Failed to copy text: ', err);
+      }
+    };
+
+    return (
+      <button className="action-btn" onClick={handleCopy} title="Copy message">
+        {copied ? <Check size={14} /> : <Copy size={14} />}
+      </button>
+    );
+  };
+
+  const TokenStatsTooltip: React.FC<{ stats: TokenStats }> = ({ stats }) => {
+    const [visible, setVisible] = useState(false);
+    const tooltipRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+      const handleClickOutside = (event: MouseEvent) => {
+        if (tooltipRef.current && !tooltipRef.current.contains(event.target as Node)) {
+          setVisible(false);
+        }
+      };
+      if (visible) {
+        document.addEventListener('mousedown', handleClickOutside);
+      }
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside);
+      };
+    }, [visible]);
+
+    if (!stats) return null;
+
+    return (
+      <div className="token-stats-container" ref={tooltipRef}>
+        <button
+          className="action-btn"
+          onClick={() => setVisible(!visible)}
+          title="View token usage"
+        >
+          <BarChart2 size={14} />
+        </button>
+        {visible && (
+          <div className="token-stats-tooltip">
+            <h3>Token Usage</h3>
+            <table>
+              <tbody>
+                <tr><td>Model</td><td>{stats.model}</td></tr>
+                {stats.error ? (
+                   <tr><td>Error</td><td className="error-text">{stats.error}</td></tr>
+                ) : (
+                  <>
+                    <tr><td>Input / Output</td><td>{stats.inputTokens} / {stats.outputTokens}</td></tr>
+                    <tr><td>Context Usage</td><td>{stats.percentOfContextWindow?.toFixed(1)}%</td></tr>
+                    <tr><td>System</td><td>{stats.systemPromptTokens}</td></tr>
+                    <tr><td>History</td><td>{stats.historyTokens}</td></tr>
+                    <tr><td>User</td><td>{stats.userMessageTokens}</td></tr>
+                    <tr><td>Tools</td><td>{stats.toolDefinitionTokens}</td></tr>
+                    <tr><td>TPM Usage</td><td>{stats.tpmUsed?.toFixed(1)}%</td></tr>
+                    <tr><td>TPD Usage</td><td>{stats.tpdUsed?.toFixed(1)}%</td></tr>
+                  </>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="chat-container">
       <header className="chat-header">
@@ -284,6 +382,12 @@ const App: React.FC = () => {
         {messages.filter(m => m.role !== 'system' && m.role !== 'tool').map((msg, i) => (
           <div key={i} className={`message-bubble ${msg.role}`}>
             <div className="message-content">{msg.content}</div>
+            {msg.role === 'assistant' && (
+              <div className="message-actions">
+                {msg.tokenStats && <TokenStatsTooltip stats={msg.tokenStats} />}
+                <CopyButton content={msg.content || ''} />
+              </div>
+            )}
           </div>
         ))}
         <div ref={chatEndRef} />

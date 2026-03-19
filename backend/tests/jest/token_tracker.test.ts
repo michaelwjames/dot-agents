@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
-import { TokenTracker } from '../../app/lib/analytics/token_tracker.js';
+import { TokenTracker } from '../../src/core/lib/analytics/token_tracker.js';
 
 describe('TokenTracker', () => {
   let tracker: TokenTracker;

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
-import { MemoryCompressor } from '../../app/lib/services/compressor.js';
+import { MemoryCompressor } from '../../src/core/lib/services/compressor.js';
 
 describe('MemoryCompressor', () => {
   let groqMock: any;

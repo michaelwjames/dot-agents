@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
-import { MakeExecutor } from '../../app/lib/executors/make_executor.js';
+import { MakeExecutor } from '../../src/core/lib/executors/make_executor.js';
 import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';

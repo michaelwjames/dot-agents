@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
-import { FileSystem } from '../../app/lib/data/file_system.js';
+import { FileSystem } from '../../src/core/lib/data/file_system.js';
 import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';

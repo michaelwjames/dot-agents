@@ -50,7 +50,7 @@ export class BossAgentService {
     this.maxToolRounds = maxToolRounds;
   }
 
-  async processMessage(message: NormalizedMessage) {
+  async processMessage(message: NormalizedMessage): Promise<any> {
     const { sessionId } = message;
     let toolExecutionHistory: Array<{ name: string, args: string }> = [];
 
@@ -307,6 +307,20 @@ SYSTEM SNAPSHOT:
         }
       }
 
+      const rateLimitStats = this.tokenTracker.getRateLimitStats(currentModel);
+      return {
+        inputTokens: contextStats.currentContextTokens,
+        outputTokens: contextStats.estimatedResponseTokens,
+        model: rateLimitStats.model,
+        systemPromptTokens: contextStats.systemPromptTokens,
+        historyTokens: contextStats.historyTokens,
+        userMessageTokens: contextStats.userMessageTokens,
+        toolDefinitionTokens: contextStats.toolDefinitionsTokens,
+        percentOfContextWindow: contextStats.percentOfContextWindow,
+        tpmUsed: rateLimitStats.percentOfTPM,
+        tpdUsed: rateLimitStats.percentOfTPD
+      };
+
     } catch (error: any) {
       console.error('Error handling message:', error);
       try {
@@ -314,6 +328,10 @@ SYSTEM SNAPSHOT:
       } catch (sendError) {
         console.error('Could not send error message:', sendError);
       }
+      return {
+        error: error.message,
+        model: this.groqModels[0] || 'llama-3.3-70b-versatile'
+      };
     }
   }
 

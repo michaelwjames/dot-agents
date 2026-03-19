@@ -241,6 +241,77 @@ body {
   background-color: var(--bubble-agent);
   border: 1px solid var(--border-color);
   border-bottom-left-radius: 4px;
+  position: relative;
+}
+
+.message-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.25rem;
+  gap: 0.25rem;
+}
+
+.action-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0.25rem;
+  opacity: 0.4;
+  transition: opacity 0.2s;
+  display: flex;
+  align-items: center;
+}
+
+.action-btn:hover {
+  opacity: 1;
+}
+
+.token-stats-container {
+  position: relative;
+}
+
+.token-stats-tooltip {
+  position: absolute;
+  bottom: 100%;
+  right: 0;
+  margin-bottom: 0.5rem;
+  background-color: #333;
+  color: #fff;
+  padding: 0.75rem;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  min-width: 200px;
+}
+
+.token-stats-tooltip h3 {
+  font-size: 0.8rem;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid #555;
+  padding-bottom: 0.25rem;
+}
+
+.token-stats-tooltip table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.token-stats-tooltip td {
+  padding: 0.125rem 0;
+}
+
+.token-stats-tooltip td:last-child {
+  text-align: right;
+  padding-left: 1rem;
+  font-family: monospace;
+}
+
+.error-text {
+  color: #ff6b6b;
+  white-space: normal;
+  max-width: 150px;
 }
 
 .chat-footer {

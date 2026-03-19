@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach, jest } from '@jest/globals';
-import { GetContextStatsTool } from '../../app/lib/tools/get_context_stats.js';
-import { TokenTracker } from '../../app/lib/analytics/token_tracker.js';
+import { describe, it, expect, beforeEach } from '@jest/globals';
+import { GetContextStatsTool } from '../../src/core/lib/tools/get_context_stats.js';
+import { TokenTracker } from '../../src/core/lib/analytics/token_tracker.js';
 
 describe('GetContextStatsTool', () => {
   let tool: GetContextStatsTool;
