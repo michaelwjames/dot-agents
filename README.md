@@ -11,6 +11,20 @@ git remote add dot-agents https://github.com/michaelwjames/dot-agents.git
 git subtree add --prefix=.agents dot-agents main --squash
 ```
 
+## Getting Started / How to Execute
+
+To start a task using an autonomous agent, prompt your AI assistant (e.g., Jules or another LLM) with the following pattern:
+
+*"Adopt the [Agent Persona] located at `.agents/[path_to_agent].md` and execute the following task: [Task Description]."*
+
+**Example for a complex task:**
+> "Adopt the Director persona located at `.agents/on-demand/director/director.md` and implement a new payment gateway integration."
+
+**Example for a code review:**
+> "Adopt the Auditor persona located at `.agents/on-demand/auditor/auditor.md` and review the changes in the `src/auth/` directory."
+
+*Note: You do not need to instruct the agent on how to manage files or logs; they will automatically follow the instructions in `.agents/SYSTEM_INSTRUCTIONS.md`.*
+
 ## Managing Updates
 
 Use the included Makefile to keep agents synced. Commands work from both the project root and the `.agents` directory:

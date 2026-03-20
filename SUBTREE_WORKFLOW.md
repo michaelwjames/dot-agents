@@ -46,6 +46,7 @@ git subtree push --prefix=.agents dot-agents main
 - **Always pull before pushing** to avoid conflicts
 - **Coordinate with other projects** when making structural changes
 - **Test thoroughly** as changes affect all projects using this subtree
+- **Safe Overrides**: If you need project-specific agent rules without modifying central files, place them in the `.agents/config/` directory. This directory is ignored by the subtree and prevents merge conflicts during updates.
 
 ## Troubleshooting
 

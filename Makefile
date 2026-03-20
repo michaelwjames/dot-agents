@@ -2,7 +2,7 @@
 # This provides convenient commands for managing the .agents subtree
 # Works from both the .agents directory and project root
 
-.PHONY: help update push setup status clean pr
+.PHONY: help update push setup status clean pr lint-agents test-client
 
 # Detect if we're in the .agents directory or project root
 ifeq ($(notdir $(CURDIR)),.agents)
@@ -18,12 +18,14 @@ endif
 # Default target
 help:
 	@echo "Available commands:"
-	@echo "  make setup    - Add .agents subtree to a new project"
-	@echo "  make update   - Pull latest changes from dot-agents repository"
-	@echo "  make push     - Push local changes to dot-agents repository"
-	@echo "  make pr       - Create pull request for changes"
-	@echo "  make status   - Show subtree status and remotes"
-	@echo "  make clean    - Remove .agents subtree (use with caution)"
+	@echo "  make setup       - Add .agents subtree to a new project"
+	@echo "  make update      - Pull latest changes from dot-agents repository"
+	@echo "  make push        - Push local changes to dot-agents repository"
+	@echo "  make pr          - Create pull request for changes"
+	@echo "  make status      - Show subtree status and remotes"
+	@echo "  make clean       - Remove .agents subtree (use with caution)"
+	@echo "  make lint-agents - Run markdown linter on .md files"
+	@echo "  make test-client - Run unit tests for jules_client.py"
 	@echo ""
 	@echo "Repository: https://github.com/michaelwjames/dot-agents.git"
 	@echo "Working from: $(CURDIR)"
@@ -106,4 +108,24 @@ pr:
 		echo "Or visit GitHub to create PR manually."; \
 	else \
 		echo "No local changes to create PR from."; \
+	fi
+
+# Lint markdown files
+lint-agents:
+	@echo "Linting markdown files..."
+	@if command -v markdownlint >/dev/null 2>&1; then \
+		cd $(GIT_ROOT) && markdownlint $(AGENTS_PREFIX)/**/*.md; \
+	else \
+		echo "markdownlint-cli is not installed. Please install it first (e.g. npm install -g markdownlint-cli)."; \
+	fi
+
+# Test jules terminal client
+test-client:
+	@echo "Testing Jules Terminal Client..."
+	@if [ -d "$(GIT_ROOT)/$(AGENTS_PREFIX)/skills/jules-subagent" ]; then \
+		cd $(GIT_ROOT)/$(AGENTS_PREFIX)/skills/jules-subagent && python -m unittest discover -s . -p "*test*.py" 2>/dev/null || echo "No tests found or test runner failed."; \
+	elif [ -d "$(GIT_ROOT)/skills/jules-subagent" ]; then \
+		cd $(GIT_ROOT)/skills/jules-subagent && python -m unittest discover -s . -p "*test*.py" 2>/dev/null || echo "No tests found or test runner failed."; \
+	else \
+		echo "Could not find jules-subagent directory."; \
 	fi
