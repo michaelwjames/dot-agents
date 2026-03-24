@@ -445,6 +445,24 @@ class JulesClient:
                 
                 return result
 
+            if state == "AWAITING_PLAN_APPROVAL":
+                result = {
+                    "status": "awaiting_plan_approval",
+                    "state": state,
+                    "session_name": session_name,
+                    "session_url": session_data.get("url", "URL not found"),
+                    "activities": activities_log
+                }
+
+                if stream_output:
+                    approval_status = {
+                        "status": "awaiting_plan_approval",
+                        "session_url": session_data.get("url", "URL not found")
+                    }
+                    print(json.dumps(approval_status, indent=2))
+
+                return result
+
             time.sleep(2) # Poll interval
 
     def display_outputs(self, outputs: List[Dict[str, Any]]):
